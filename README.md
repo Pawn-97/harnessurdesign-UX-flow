@@ -13,11 +13,11 @@
 
 ```bash
 # 1. 克隆仓库
-git clone https://[github.com/Pawn-97/harnessurdesign-UX-flow.git]
-cd design-flow
+git clone https://github.com/Pawn-97/harnessurdesign-UX-flow.git
+cd harnessurdesign-UX-flow
 
 # 2. 安装 Python 依赖（验证脚本需要）
-pip install -r .harnessdesign/scripts/requirements.txt
+pip3 install -r .harnessdesign/scripts/requirements.txt
 
 # 3. 验证安装完整性
 python3 .harnessdesign/scripts/integration_test.py
@@ -79,7 +79,7 @@ cp AGENTS.md /path/to/your-project/AGENTS.md
 
 # 如果目标项目已有 CLAUDE.md，手动合并内容
 # 安装依赖
-pip install -r /path/to/your-project/.harnessdesign/scripts/requirements.txt
+pip3 install -r /path/to/your-project/.harnessdesign/scripts/requirements.txt
 ```
 
 ## 卸载

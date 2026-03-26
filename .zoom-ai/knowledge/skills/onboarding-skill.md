@@ -26,7 +26,8 @@ allowed_tools:
 
 ```
 [PREREQUISITE] 由 zoom-router 调用
-触发条件：.zoom-ai/knowledge/product-context/product-context-index.md 不存在
+触发条件：.zoom-ai/knowledge/product-context/product-context-index.md 不存在或内容无效
+  无效 = 文件不存在 / 内容少于 200 字符 / 包含 "Stub" 或 "placeholder"
 状态：current_state === "onboarding"（由路由器在 init 阶段检测触发）
 ```
 

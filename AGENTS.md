@@ -12,24 +12,37 @@
 Phase 0: Onboarding（首次）→ Phase 1: 上下文对齐 → Phase 2: 调研+JTBD → Phase 3: 逐场景交互方案 → Phase 4: 高保真 HTML
 ```
 
-## 启动方式
+## 命令快捷方式
 
-Codex 不支持 `/zoom-start` 命令。请使用以下方式启动：
+当设计师输入以下命令时，你必须识别并执行对应操作。命令不区分大小写。
 
-**设计师输入**（自然语言）：
-```
-请读取 .zoom-ai/knowledge/skills/zoom-router.md，然后用 PRD 文件 <path> 启动一个新设计任务。
-```
+| 命令 | 操作 |
+|------|------|
+| `/zoom-start --prd <path>` | 启动新设计任务（见下方详细流程） |
+| `/zoom-resume` | 恢复上次未完成的任务 |
+| `/zoom-status` | 显示当前任务状态摘要 |
+| `/recall list` | 列出所有可回引的归档文件 |
+| `/recall <phase> --query "<keyword>"` | 按关键词精准回引归档内容 |
 
-**你收到启动指令后**：
-1. 读取 `.zoom-ai/knowledge/skills/zoom-router.md` 的 §1.1 了解初始化流程
-2. 按 zoom-router.md 的指令创建任务工作区和 `task-progress.json`
-3. 按状态机调度逻辑执行工作流
+### `/zoom-start --prd <path>` 详细流程
 
-**会话恢复**（断开后重新启动）：
-```
-请读取 tasks/ 目录下的 task-progress.json，恢复之前的设计任务。
-```
+1. 读取 `AGENTS.md`（本文件）了解全部规则
+2. 读取 `.zoom-ai/knowledge/skills/zoom-router.md` 的 §1.1 了解初始化流程
+3. 按 zoom-router.md 的指令创建任务工作区和 `task-progress.json`
+4. 执行 Onboarding 前置检查（检查知识库是否有效）
+5. 按状态机调度逻辑执行工作流
+
+### `/zoom-resume` 详细流程
+
+1. 扫描 `tasks/` 目录，找到包含 `task-progress.json` 的任务工作区
+2. 读取 `task-progress.json`，恢复 `current_state`
+3. 读取 `.zoom-ai/knowledge/skills/zoom-router.md` 的 §6（会话恢复）
+4. 重建锚定层，加载对应 Skill 继续执行
+
+### `/zoom-status` 详细流程
+
+1. 运行 `python3 scripts/validate_transition.py --summary tasks/<task-name>`
+2. 将结构化 JSON 输出格式化展示给设计师
 
 ## ⚠️ Hooks 补偿规则（Codex 必读）
 

@@ -70,9 +70,10 @@ allowed_tools:
    ```
 
 3. **Onboarding 前置检查**：
-   - 检查 `.zoom-ai/knowledge/product-context/product-context-index.md` 是否存在
-   - **不存在** → 读取并执行 `onboarding-skill.md`，完成后将 `onboarding.passes` 设为 `true`
-   - **已存在** → 跳过 Onboarding，将 `onboarding.passes` 设为 `true`（标记为已完成）
+   - 检查 `.zoom-ai/knowledge/product-context/product-context-index.md` 是否存在**且内容有效**
+   - 有效 = 文件存在 + 内容超过 200 字符 + 不包含 "Stub" 或 "placeholder"
+   - **不存在或内容无效** → 读取并执行 `onboarding-skill.md`，完成后将 `onboarding.passes` 设为 `true`
+   - **存在且内容有效** → 跳过 Onboarding，将 `onboarding.passes` 设为 `true`（标记为已完成）
 
 4. **注入锚定层**：
    - 读取 `product-context-index.md`（L0，~500-800 tokens）作为锚定层常驻上下文

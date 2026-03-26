@@ -468,7 +468,8 @@ def test_state_chain_simulation(r: TestResult):
             if current in artifact_stubs:
                 for stub_path, stub_content in artifact_stubs[current]:
                     os.makedirs(os.path.dirname(stub_path), exist_ok=True)
-                    if not os.path.isfile(stub_path):
+                    already_existed = os.path.isfile(stub_path)
+                    if not already_existed:
                         with open(stub_path, "w", encoding="utf-8") as f:
                             f.write(stub_content)
                         if not stub_path.startswith(tmp_dir):

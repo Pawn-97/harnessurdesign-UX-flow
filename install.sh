@@ -139,15 +139,19 @@ if [ ! -f "$TARGET_DIR/.claude/hooks.json" ] && [ -f "$TMPDIR/repo/.claude/hooks
   ok "已安装写入校验 hooks"
 fi
 
-# ─── 安装 Python 依赖 ───
-info "安装 Python 依赖..."
-"$PYTHON3" -m pip install -q -r "$TARGET_DIR/.harnessdesign/scripts/requirements.txt"
-ok "Python 依赖安装完成"
+# ─── 安装 Python 依赖（使用 venv） ───
+info "创建 Python 虚拟环境并安装依赖..."
+VENV_DIR="$TARGET_DIR/.venv"
+if [ ! -d "$VENV_DIR" ]; then
+  "$PYTHON3" -m venv "$VENV_DIR"
+fi
+"$VENV_DIR/bin/pip" install -q -r "$TARGET_DIR/.harnessdesign/scripts/requirements.txt"
+ok "Python 依赖安装完成（虚拟环境: .venv/）"
 
 # ─── 验证安装 ───
 info "运行完整性验证..."
 echo ""
-(cd "$TARGET_DIR" && "$PYTHON3" .harnessdesign/scripts/integration_test.py) && VERIFY_OK=true || VERIFY_OK=false
+(cd "$TARGET_DIR" && "$VENV_DIR/bin/python3" .harnessdesign/scripts/integration_test.py) && VERIFY_OK=true || VERIFY_OK=false
 
 echo ""
 if [ "$VERIFY_OK" = true ]; then
@@ -167,4 +171,7 @@ echo -e "     ${BOLD}claude${NC}"
 echo ""
 echo -e "  ${BLUE}3.${NC} 启动工作流（AI 会邀请你描述任务）："
 echo -e "     ${BOLD}/harnessdesign-start${NC}"
+echo ""
+echo -e "  ${YELLOW}提示:${NC} Python 依赖已安装在 ${BOLD}.venv/${NC} 虚拟环境中。"
+echo -e "     如需手动运行脚本，请先激活: ${BOLD}source .venv/bin/activate${NC}"
 echo ""

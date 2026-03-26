@@ -27,15 +27,32 @@ TARGET_DIR="${1:-.}"
 command -v git   >/dev/null 2>&1 || fail "需要安装 Git。请访问 https://git-scm.com/downloads"
 command -v python3 >/dev/null 2>&1 || fail "需要安装 Python 3.10+。请访问 https://www.python.org/downloads/"
 
-PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+# 优先使用 Homebrew / 用户安装的 python3，而非 macOS 系统自带的旧版本
+if command -v /opt/homebrew/bin/python3 >/dev/null 2>&1; then
+  PYTHON3="/opt/homebrew/bin/python3"
+elif command -v /usr/local/bin/python3 >/dev/null 2>&1; then
+  PYTHON3="/usr/local/bin/python3"
+else
+  PYTHON3="python3"
+fi
+
+PYTHON_VERSION=$("$PYTHON3" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
 PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
 PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
 if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 10 ]; }; then
-  fail "Python 版本需要 3.10+，当前版本: $PYTHON_VERSION"
+  fail "Python 版本需要 3.10+，当前版本: $PYTHON_VERSION（路径: $PYTHON3）"
 fi
 
-# ─── 解析目标路径 ───
-TARGET_DIR=$(cd "$TARGET_DIR" 2>/dev/null && pwd || mkdir -p "$TARGET_DIR" && cd "$TARGET_DIR" && pwd)
+# ─── 清理并解析目标路径 ───
+# 去除可能由 curl | bash 管道引入的 \r 等不可见字符
+TARGET_DIR=$(printf '%s' "$TARGET_DIR" | tr -d '\r\n')
+
+if [ -d "$TARGET_DIR" ]; then
+  TARGET_DIR=$(cd "$TARGET_DIR" && pwd)
+else
+  mkdir -p "$TARGET_DIR"
+  TARGET_DIR=$(cd "$TARGET_DIR" && pwd)
+fi
 
 echo ""
 echo -e "${BOLD}╭─────────────────────────────────────╮${NC}"
@@ -124,13 +141,13 @@ fi
 
 # ─── 安装 Python 依赖 ───
 info "安装 Python 依赖..."
-pip3 install -q -r "$TARGET_DIR/.harnessdesign/scripts/requirements.txt"
+"$PYTHON3" -m pip install -q -r "$TARGET_DIR/.harnessdesign/scripts/requirements.txt"
 ok "Python 依赖安装完成"
 
 # ─── 验证安装 ───
 info "运行完整性验证..."
 echo ""
-(cd "$TARGET_DIR" && python3 .harnessdesign/scripts/integration_test.py) && VERIFY_OK=true || VERIFY_OK=false
+(cd "$TARGET_DIR" && "$PYTHON3" .harnessdesign/scripts/integration_test.py) && VERIFY_OK=true || VERIFY_OK=false
 
 echo ""
 if [ "$VERIFY_OK" = true ]; then
@@ -143,7 +160,7 @@ echo ""
 echo -e "${BOLD}下一步：${NC}"
 echo ""
 echo -e "  ${BLUE}1.${NC} 进入项目文件夹："
-echo -e "     ${BOLD}cd $TARGET_DIR${NC}"
+echo -e "     ${BOLD}cd \"$TARGET_DIR\"${NC}"
 echo ""
 echo -e "  ${BLUE}2.${NC} 启动 Claude Code："
 echo -e "     ${BOLD}claude${NC}"

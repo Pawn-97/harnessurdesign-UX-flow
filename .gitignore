@@ -3,6 +3,7 @@
 
 # AI tool local config (each user generates their own)
 .claude/
+!.claude/commands/
 .cursor/
 
 # Runtime task workspaces (designer-specific, not shared)

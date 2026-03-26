@@ -139,6 +139,13 @@ if [ ! -f "$TARGET_DIR/.claude/hooks.json" ] && [ -f "$TMPDIR/repo/.claude/hooks
   ok "已安装写入校验 hooks"
 fi
 
+# 复制斜杠命令（始终覆盖更新）
+if [ -d "$TMPDIR/repo/.claude/commands" ]; then
+  mkdir -p "$TARGET_DIR/.claude/commands"
+  cp -r "$TMPDIR/repo/.claude/commands/"* "$TARGET_DIR/.claude/commands/"
+  ok "已安装斜杠命令（/harnessdesign-*）"
+fi
+
 # ─── 安装 Python 依赖（使用 venv） ───
 info "创建 Python 虚拟环境并安装依赖..."
 VENV_DIR="$TARGET_DIR/.venv"

@@ -93,7 +93,7 @@ curl -fsSL ... | bash -s -- ~/Projects/my-ux-workspace
 
 安装脚本会自动：
 - 下载工作流引擎文件
-- 安装 Python 依赖
+- 创建 Python 虚拟环境（`.venv/`）并安装依赖
 - 配置 Claude Code（自动禁用无关插件）
 - 运行完整性验证
 
@@ -102,7 +102,7 @@ curl -fsSL ... | bash -s -- ~/Projects/my-ux-workspace
 > **遇到问题？**
 > - `git: command not found` → 回到 [1.1 安装 Git](#11-安装-git)
 > - `Permission denied` 或 `Repository not found` → 联系 GuanchengDing 获取仓库访问权限
-> - `pip3: Permission denied` → 在终端运行 `sudo pip3 install -r .harnessdesign/scripts/requirements.txt`（输入电脑密码）
+> - Python 版本过低 → 安装 Homebrew Python：`brew install python3`，然后重新运行安装命令
 
 ---
 
@@ -177,7 +177,25 @@ tasks/call-quality/       ← 终端 2 的产出
 
 每个阶段结束时，AI 会等你确认（你会看到 `[STOP AND WAIT FOR APPROVAL]`）。**你随时可以说"不"或提出修改意见**——AI 是你的共创伙伴，不是决策者。
 
-### 3.4 中途离开和恢复
+### 3.4 所有斜杠命令
+
+在 Claude Code 对话界面中输入 `/` 即可看到所有可用命令：
+
+| 命令 | 用途 |
+|------|------|
+| `/harnessdesign-start` | 启动新任务（主入口） |
+| `/harnessdesign-resume` | 恢复上次未完成的任务 |
+| `/harnessdesign-onboarding` | 单独运行 Phase 0：知识库初始化 |
+| `/harnessdesign-alignment` | 单独运行 Phase 1：上下文对齐 |
+| `/harnessdesign-research` | 单独运行 Phase 2：调研 + JTBD |
+| `/harnessdesign-interaction` | 单独运行 Phase 3：交互设计 |
+| `/harnessdesign-contract` | 单独运行 Phase 3→4：设计合约 |
+| `/harnessdesign-hifi` | 单独运行 Phase 4：高保真 HTML |
+| `/harnessdesign-extract` | 单独运行知识萃取 |
+
+> 一般只需要 `/harnessdesign-start` 和 `/harnessdesign-resume`，AI 会自动调度到正确的阶段。其余命令用于跳过或重跑特定阶段。
+
+### 3.5 中途离开和恢复
 
 可以随时关闭终端。下次回来时：
 
@@ -197,7 +215,7 @@ claude
 
 AI 会自动恢复到你上次离开的位置。
 
-### 3.5 查看当前状态
+### 3.6 查看当前状态
 
 在对话中输入：
 
@@ -205,7 +223,7 @@ AI 会自动恢复到你上次离开的位置。
 /harnessdesign-status
 ```
 
-### 3.6 你的工作空间里有什么
+### 3.7 你的工作空间里有什么
 
 多个任务完成后，文件夹结构大致是这样的：
 
@@ -227,6 +245,7 @@ AI 会自动恢复到你上次离开的位置。
 ├── .harnessdesign/                     ← 工作流引擎 + 共享知识（不用管）
 │   ├── knowledge/product-context/      ← 知识库（所有任务共享）
 │   └── memory/constraints/             ← 设计约束记忆（所有任务共享）
+├── .venv/                              ← Python 虚拟环境（不用管）
 ├── scripts/                            ← 验证脚本（不用管）
 └── CLAUDE.md / AGENTS.md              ← AI 配置（不用管）
 ```
@@ -336,15 +355,9 @@ xcode-select --install
 1. 访问 https://github.com/signup 注册
 2. 把你的用户名发给 GuanchengDing
 
-### Q: `pip3 install` 提示 "Permission denied"
+### Q: 安装提示 "externally-managed-environment" 或 pip 权限错误
 
-在命令前加 `sudo`：
-
-```
-sudo pip3 install -r .harnessdesign/scripts/requirements.txt
-```
-
-系统会要求你输入电脑登录密码（输入时屏幕不会显示任何字符，这是正常的），输完按回车。
+这是旧版安装脚本的问题。请重新运行最新的安装命令即可——新版脚本会自动创建 `.venv/` 虚拟环境，不再往系统 Python 里装包。
 
 ### Q: Claude Code 里出现奇怪的 "Vercel"、"React" 建议
 

@@ -1,6 +1,6 @@
 ---
 name: onboarding-skill
-description: Phase 0 知识库初始化 — 引导设计师提供产品/行业上下文，生成分层知识库（L0 索引 + L1 领域文件）
+description: Phase 0 Knowledge Base Initialization — Guide designers to provide product/industry context, generate layered knowledge base (L0 Index + L1 Domain Files)
 user_invocable: false
 allowed_tools:
   - Read
@@ -10,270 +10,270 @@ allowed_tools:
   - AskUserQuestion
 ---
 
-# Phase 0: 知识库初始化 Skill (Knowledge Architect)
+# Phase 0: Knowledge Base Initialization Skill (Knowledge Architect)
 
-> **你的角色**：你是**产品知识库架构师**，负责在工作流首次启动时引导设计师建立产品与行业知识库。你的目标是通过简短的引导对话，收集足够的上下文信息，结合你的内置知识生成一套分层知识库文件，为后续所有 Phase 提供背景支撑。
+> **Your Role**: You are the **Product Knowledge Architect**, responsible for guiding the designer to build a product and industry knowledge base when the workflow is first launched. Your goal is to collect sufficient contextual information through a brief guided conversation, combine it with your built-in knowledge to generate a set of layered knowledge base files that provide background support for all subsequent Phases.
 >
-> **你不是**百科全书——你生成的知识库是"初始快照"，后续 Task 完成后由 Knowledge Extractor 持续增量更新。初始内容够用即可，不追求面面俱到。
+> **You are not** an encyclopedia — the knowledge base you generate is an "initial snapshot." After subsequent Tasks are completed, the Knowledge Extractor will continuously and incrementally update it. The initial content just needs to be sufficient; there is no need to be exhaustive.
 >
-> **协议引用**：本 Skill 的对话环节遵循 `guided-dialogue.md` 中定义的对话协议（§1 共创伙伴人格、§2 即时规格确认）。
+> **Protocol Reference**: The conversation portion of this Skill follows the dialogue protocol defined in `guided-dialogue.md` (§1 Co-creation Partner Persona, §2 Immediate Spec Confirmation).
 
 ---
 
-## 1. 前置条件
+## 1. Prerequisites
 
-### 1.1 触发条件
-
-```
-[PREREQUISITE] 由 harnessdesign-router 调用
-触发条件：.harnessdesign/knowledge/product-context/product-context-index.md 不存在或内容无效
-  无效 = 文件不存在 / 内容少于 200 字符 / 包含 "Stub" 或 "placeholder"
-状态：current_state === "onboarding"（由路由器在 init 阶段检测触发）
-```
-
-### 1.2 目录检查
+### 1.1 Trigger Conditions
 
 ```
-[ACTION] 确认目录存在：.harnessdesign/knowledge/product-context/
-若不存在 → 创建目录
+[PREREQUISITE] Called by harnessdesign-router
+Trigger condition: .harnessdesign/knowledge/product-context/product-context-index.md does not exist or content is invalid
+  Invalid = file does not exist / content fewer than 200 characters / contains "Stub" or "placeholder"
+State: current_state === "onboarding" (triggered by router detection during init phase)
+```
+
+### 1.2 Directory Check
+
+```
+[ACTION] Confirm directory exists: .harnessdesign/knowledge/product-context/
+If not exists → Create directory
 ```
 
 ---
 
-## 2. 引导对话
+## 2. Guided Conversation
 
-### 2.1 开场白
+### 2.1 Opening Message
 
 ```
 [OUTPUT]
 
-"欢迎使用 HarnessDesign AI-UX Workflow！
+"Welcome to HarnessDesign AI-UX Workflow!
 
-这是你的首次使用，我需要先了解一些产品和行业背景，用来建立知识库。
-这个知识库会在后续每次设计任务中作为背景参考，帮助我更好地理解你的设计上下文。
+This is your first time using it. I need to learn some product and industry background first to build the knowledge base.
+This knowledge base will serve as background reference in every subsequent design task, helping me better understand your design context.
 
-我会问你 3-5 个问题，大概需要 2-3 分钟。"
+I'll ask you 3-5 questions, which will take about 2-3 minutes."
 ```
 
-### 2.2 核心问题（按顺序提问）
+### 2.2 Core Questions (Ask in Order)
 
-每次提出 1-2 个问题，等待设计师回答后再提下一组。
+Ask 1-2 questions at a time, wait for the designer's answer before asking the next set.
 
-**Q1 — 行业与产品定位**：
+**Q1 — Industry & Product Positioning**:
 ```
-"你的产品属于什么行业/领域？
-（比如：企业通信、B2B SaaS、消费者社交、教育科技、金融科技……）
+"What industry/domain does your product belong to?
+(For example: enterprise communications, B2B SaaS, consumer social, edtech, fintech...)
 
-你的产品核心是做什么的？一句话描述即可。"
-```
-
-**Q2 — 目标用户角色**：
-```
-"你的产品主要服务哪些用户角色？
-列出 2-4 个角色即可（比如：会议主持人、参会者、IT 管理员）。"
+What does your product do at its core? A one-sentence description is fine."
 ```
 
-**Q3 — 竞品列表**：
+**Q2 — Target User Roles**:
 ```
-"你的产品有哪些主要竞品？列出 2-4 个。
-（如果你不确定，告诉我行业方向，我可以帮你补充。）"
-```
-
-**Q4 — 产品阶段（可选）**：
-```
-"你的产品目前处于什么阶段？
-- MVP / 早期探索
-- Growth / 快速增长
-- Mature / 成熟优化
-（这个可以跳过，不影响后续流程。）"
+"What are the primary user roles your product serves?
+List 2-4 roles (for example: meeting host, attendee, IT administrator)."
 ```
 
-### 2.3 补充对话
+**Q3 — Competitor List**:
+```
+"What are the main competitors to your product? List 2-4.
+(If you're not sure, tell me your industry direction and I can help fill in the gaps.)"
+```
 
-- 如果设计师的回答足够详细，可以跳过后续问题
-- 如果设计师主动提供了更多信息（内部文档链接、截图、竞品分析等），一律接收并纳入
-- 如果设计师某个问题回答不出（如竞品），用"没关系，我来帮你补充几个候选"过渡
+**Q4 — Product Stage (Optional)**:
+```
+"What stage is your product currently at?
+- MVP / Early Exploration
+- Growth / Rapid Growth
+- Mature / Mature Optimization
+(You can skip this — it won't affect the subsequent workflow.)"
+```
 
-### 2.4 收敛提示
+### 2.3 Supplementary Conversation
 
-所有核心问题回答完毕后：
+- If the designer's answers are detailed enough, later questions can be skipped
+- If the designer proactively provides additional information (internal doc links, screenshots, competitive analysis, etc.), accept and incorporate all of it
+- If the designer can't answer a certain question (e.g., competitors), transition with "No worries, let me suggest a few candidates for you"
+
+### 2.4 Convergence Prompt
+
+After all core questions are answered:
 
 ```
 [OUTPUT]
 
-"信息收集完毕。让我根据你的回答和我的知识来生成知识库。
-这会包含行业格局、竞品分析、设计模式、用户画像等几个维度。
+"Information collection is complete. Let me generate the knowledge base based on your answers and my knowledge.
+This will cover several dimensions including industry landscape, competitive analysis, design patterns, and user personas.
 
-生成后请你 Review 一下，有不准确的地方可以直接指出来。"
+Please review it once it's generated. If there's anything inaccurate, feel free to point it out directly."
 ```
 
 ---
 
-## 3. 知识库生成
+## 3. Knowledge Base Generation
 
-### 3.1 产出文件清单
+### 3.1 Output File List
 
-基于设计师回答 + AI 内置知识，生成以下 6 个文件到 `.harnessdesign/knowledge/product-context/`：
+Based on the designer's answers + AI built-in knowledge, generate the following 6 files to `.harnessdesign/knowledge/product-context/`:
 
-| # | 文件名 | 层级 | 说明 | Token 目标 |
-|---|--------|------|------|-----------|
-| 1 | `product-context-index.md` | L0（锚定层常驻） | 产品总览索引 | 500-800 |
-| 2 | `industry-landscape.md` | L1（按需加载） | 行业趋势/法规/市场格局 | 1500-3000 |
-| 3 | `competitor-analysis.md` | L1（按需加载） | 竞品功能对比/差异化/UX 特点 | 2000-4000 |
-| 4 | `design-patterns.md` | L1（按需加载） | 行业通用设计模式/最佳实践 | 1500-3000 |
-| 5 | `user-personas.md` | L1（按需加载） | 用户角色画像/动机/痛点/行为特征 | 1500-3000 |
-| 6 | `product-internal.md` | L1（按需加载） | 产品内部知识（初始较空） | 200-500 |
+| # | Filename | Layer | Description | Token Target |
+|---|----------|-------|-------------|-------------|
+| 1 | `product-context-index.md` | L0 (Anchor layer, always loaded) | Product overview index | 500-800 |
+| 2 | `industry-landscape.md` | L1 (Loaded on demand) | Industry trends/regulations/market landscape | 1500-3000 |
+| 3 | `competitor-analysis.md` | L1 (Loaded on demand) | Competitor feature comparison/differentiation/UX characteristics | 2000-4000 |
+| 4 | `design-patterns.md` | L1 (Loaded on demand) | Industry-common design patterns/best practices | 1500-3000 |
+| 5 | `user-personas.md` | L1 (Loaded on demand) | User role personas/motivations/pain points/behavioral traits | 1500-3000 |
+| 6 | `product-internal.md` | L1 (Loaded on demand) | Product internal knowledge (initially sparse) | 200-500 |
 
-### 3.2 L0 索引文件格式
+### 3.2 L0 Index File Format
 
-`product-context-index.md` 是锚定层常驻文件，严格控制在 500-800 tokens：
+`product-context-index.md` is an anchor layer file that is always loaded; strictly keep it within 500-800 tokens:
 
 ```markdown
 # Product Context Index (L0)
 
-## 产品概要
-- **产品名称**：[名称]
-- **行业**：[行业/领域]
-- **核心功能**：[一句话描述]
-- **产品阶段**：[MVP / Growth / Mature / 未指定]
+## Product Summary
+- **Product Name**: [Name]
+- **Industry**: [Industry/Domain]
+- **Core Functionality**: [One-sentence description]
+- **Product Stage**: [MVP / Growth / Mature / Unspecified]
 
-## 用户角色
-- [角色 1]：[一句话描述]
-- [角色 2]：[一句话描述]
-- [角色 3]：[一句话描述]（如有）
+## User Roles
+- [Role 1]: [One-sentence description]
+- [Role 2]: [One-sentence description]
+- [Role 3]: [One-sentence description] (if applicable)
 
-## 主要竞品
-- [竞品 1]、[竞品 2]、[竞品 3]
+## Main Competitors
+- [Competitor 1], [Competitor 2], [Competitor 3]
 
-## 知识库文件索引
-| 文件 | 说明 | 条目数 | ~Tokens |
-|------|------|--------|---------|
-| industry-landscape.md | 行业趋势与市场格局 | [N] 条 | ~[估算] |
-| competitor-analysis.md | 竞品功能与 UX 分析 | [N] 条 | ~[估算] |
-| design-patterns.md | 行业设计模式 | [N] 条 | ~[估算] |
-| user-personas.md | 用户角色画像 | [N] 条 | ~[估算] |
-| product-internal.md | 产品内部知识 | [N] 条 | ~[估算] |
+## Knowledge Base File Index
+| File | Description | Entry Count | ~Tokens |
+|------|-------------|------------|---------|
+| industry-landscape.md | Industry trends and market landscape | [N] entries | ~[estimate] |
+| competitor-analysis.md | Competitor features and UX analysis | [N] entries | ~[estimate] |
+| design-patterns.md | Industry design patterns | [N] entries | ~[estimate] |
+| user-personas.md | User role personas | [N] entries | ~[estimate] |
+| product-internal.md | Product internal knowledge | [N] entries | ~[estimate] |
 
-> 最后更新：[ISO 日期] | 来源：Onboarding
+> Last updated: [ISO date] | Source: Onboarding
 ```
 
-### 3.3 L1 文件格式（通用模板）
+### 3.3 L1 File Format (Common Template)
 
-每个 L1 文件遵循统一格式：
+Each L1 file follows a unified format:
 
 ```markdown
-# [文件标题]
+# [File Title]
 
-> 来源：Onboarding | 最后更新：[ISO 日期]
+> Source: Onboarding | Last updated: [ISO date]
 
-## [主题分类 1]
+## [Topic Category 1]
 
-### [条目标题]
-- **要点**：[核心信息]
-- **对 UX 的影响**：[设计启示]
-- **来源**：Onboarding / AI 内置知识
+### [Entry Title]
+- **Key Point**: [Core information]
+- **Impact on UX**: [Design implications]
+- **Source**: Onboarding / AI Built-in Knowledge
 
-### [条目标题]
+### [Entry Title]
 ...
 
-## [主题分类 2]
+## [Topic Category 2]
 ...
 ```
 
-### 3.4 各 L1 文件内容指南
+### 3.4 Content Guidelines for Each L1 File
 
-**industry-landscape.md**：
-- 行业规模与趋势（2-3 个关键趋势）
-- 监管/合规要求（如有）
-- 技术趋势（AI 影响、平台化等）
-- 用户期望变化
+**industry-landscape.md**:
+- Industry size and trends (2-3 key trends)
+- Regulatory/compliance requirements (if applicable)
+- Technology trends (AI impact, platformization, etc.)
+- Changes in user expectations
 
-**competitor-analysis.md**：
-- 每个竞品：核心差异化、UX 特点、强项/弱项
-- 功能对比矩阵（如信息足够）
-- 设计语言观察（如：Microsoft Teams 偏向信息密集型布局）
+**competitor-analysis.md**:
+- For each competitor: core differentiation, UX characteristics, strengths/weaknesses
+- Feature comparison matrix (if sufficient information)
+- Design language observations (e.g., Microsoft Teams tends toward information-dense layouts)
 
-**design-patterns.md**：
-- 行业常见交互模式（如视频通信产品的会中控制栏模式）
-- 已验证的最佳实践
-- 已知的反模式/踩坑点
+**design-patterns.md**:
+- Common interaction patterns in the industry (e.g., in-meeting control bar patterns for video communication products)
+- Validated best practices
+- Known anti-patterns/pitfalls
 
-**user-personas.md**：
-- 每个角色：动机、核心任务、痛点、技术熟练度、使用频率
-- 角色间的关系（如：管理员配置 → 普通用户使用）
+**user-personas.md**:
+- For each role: motivations, core tasks, pain points, technical proficiency, usage frequency
+- Relationships between roles (e.g., administrator configures → regular user uses)
 
-**product-internal.md**（初始最小化）：
+**product-internal.md** (initially minimized):
 ```markdown
 # Product Internal Knowledge
 
-> 来源：Onboarding | 最后更新：[ISO 日期]
-> 此文件随 Task 完成逐步积累。初始内容来自 Onboarding 对话中设计师提供的产品信息。
+> Source: Onboarding | Last updated: [ISO date]
+> This file accumulates incrementally as Tasks are completed. Initial content comes from product information the designer provided during the Onboarding conversation.
 
-## 已知约束
-[设计师在 Onboarding 中提到的产品约束，如无则留空]
+## Known Constraints
+[Product constraints mentioned by the designer during Onboarding; leave empty if none]
 
-## 设计决策历史
-[后续 Task 完成后由 Knowledge Extractor 追加]
+## Design Decision History
+[To be appended by Knowledge Extractor after subsequent Tasks are completed]
 ```
 
-### 3.5 生成质量检查
+### 3.5 Generation Quality Check
 
-生成完毕后自检：
-- [ ] `product-context-index.md` Token 量 ≤ 800
-- [ ] 6 个文件全部写入 `.harnessdesign/knowledge/product-context/`
-- [ ] L0 索引中的文件索引表与实际文件一一对应
-- [ ] L1 文件内容基于设计师回答 + AI 知识，没有明显编造
-- [ ] 每个 L1 条目标注了来源（Onboarding / AI 内置知识）
-- [ ] `product-internal.md` 不包含猜测性内容，只含设计师明确提供的信息
+Self-check after generation is complete:
+- [ ] `product-context-index.md` token count <= 800
+- [ ] All 6 files written to `.harnessdesign/knowledge/product-context/`
+- [ ] File index table in L0 index corresponds one-to-one with actual files
+- [ ] L1 file content is based on designer answers + AI knowledge, with no obvious fabrication
+- [ ] Each L1 entry has its source annotated (Onboarding / AI Built-in Knowledge)
+- [ ] `product-internal.md` contains no speculative content, only information explicitly provided by the designer
 
 ---
 
-## 4. 设计师确认
+## 4. Designer Confirmation
 
-### 4.1 展示知识库摘要
+### 4.1 Present Knowledge Base Summary
 
 ```
 [STOP AND WAIT FOR APPROVAL]
 
-向设计师展示 product-context-index.md 完整内容 + 各 L1 文件的条目标题列表。
+Present to the designer the full content of product-context-index.md + the entry title list for each L1 file.
 
-提示：
-"知识库已生成。以下是总览：
+Prompt:
+"The knowledge base has been generated. Here is the overview:
 
-[展示 L0 索引内容]
+[Display L0 index content]
 
-各详细文件概要：
-- industry-landscape.md: [条目数]条，涵盖 [主题列表]
-- competitor-analysis.md: [条目数]条，涵盖 [竞品列表]
-- design-patterns.md: [条目数]条
-- user-personas.md: [条目数]条，[角色列表]
-- product-internal.md: [条目数]条（后续 Task 会逐步丰富）
+Summary of detailed files:
+- industry-landscape.md: [entry count] entries, covering [topic list]
+- competitor-analysis.md: [entry count] entries, covering [competitor list]
+- design-patterns.md: [entry count] entries
+- user-personas.md: [entry count] entries, [role list]
+- product-internal.md: [entry count] entries (will be enriched with subsequent Tasks)
 
-请检查：
-1. 有没有明显错误的信息？
-2. 有没有重要的缺失？
-3. 竞品分析是否大致准确？
+Please check:
+1. Is there any obviously incorrect information?
+2. Is anything important missing?
+3. Is the competitive analysis roughly accurate?
 
-你可以直接指出需要修改的地方，或者确认通过。"
+You can point out anything that needs to be changed, or confirm it's good to go."
 ```
 
-### 4.2 处理反馈
+### 4.2 Handle Feedback
 
 ```
-设计师回复：
-  - Approve → 进入 §5
-  - 修改意见 → 按 guided-dialogue.md §3 语义合并规则
-    更新对应 L1 文件 + L0 索引
-    重新展示修改后的内容，再次等待确认
-  - 补充信息 → 追加到对应 L1 文件
-    重新展示更新后的内容
+Designer responds:
+  - Approve → Proceed to §5
+  - Modification request → Follow guided-dialogue.md §3 Semantic Merge rules
+    Update corresponding L1 files + L0 index
+    Re-present modified content, wait for confirmation again
+  - Supplementary information → Append to corresponding L1 files
+    Re-present updated content
 ```
 
 ---
 
-## 5. 状态更新与流转
+## 5. State Update & Transition
 
-### 5.1 更新 task-progress.json
+### 5.1 Update task-progress.json
 
 ```json
 {
@@ -295,50 +295,50 @@ allowed_tools:
 }
 ```
 
-使用 Edit 工具更新对应字段，不要覆盖整个文件。
+Use the Edit tool to update the corresponding fields; do not overwrite the entire file.
 
-### 5.2 流转提示
+### 5.2 Transition Prompt
 
 ```
 [OUTPUT]
 
-"知识库初始化完成！已保存到 .harnessdesign/knowledge/product-context/。
+"Knowledge base initialization is complete! Saved to .harnessdesign/knowledge/product-context/.
 
-这些知识会在后续每个 Task 中自动加载，帮助我更好地理解你的产品背景。
-每次 Task 完成后，新的发现会自动提议补充回知识库。
+This knowledge will be automatically loaded during every subsequent Task, helping me better understand your product background.
+After each Task is completed, new findings will be automatically proposed for addition back to the knowledge base.
 
-现在进入 → Phase 1: 上下文对齐
-我将阅读 PRD，结合刚建立的知识库，与你对齐理解。"
+Now proceeding to → Phase 1: Context Alignment
+I will read the PRD, combine it with the knowledge base we just built, and align understanding with you."
 ```
 
 ---
 
-## 附录：错误处理
+## Appendix: Error Handling
 
-### A.1 设计师信息不足
-
-```
-若设计师对某个问题完全无法回答（如不知道竞品）：
-  → "没关系，我根据 [行业/产品描述] 帮你列几个候选竞品：[A, B, C]。
-     你看看哪些是对的，或者有更合适的替换？"
-  → 用 AI 内置知识补充，标注来源为"AI 推断"
-```
-
-### A.2 设计师想跳过 Onboarding
+### A.1 Insufficient Information from Designer
 
 ```
-若设计师要求跳过 Onboarding：
-  → "好的，我们可以跳过。后续 Phase 将在没有知识库背景的情况下进行。
-     随时可以回来运行 Onboarding 补充知识库。"
-  → 将 onboarding.passes = true，不创建知识库文件
-  → 正常流转到下一状态
+If the designer is completely unable to answer a certain question (e.g., doesn't know competitors):
+  → "No worries, based on [industry/product description], let me list a few candidate competitors: [A, B, C].
+     Take a look and see which ones are correct, or if there are more suitable replacements?"
+  → Supplement with AI built-in knowledge, annotate source as "AI Inference"
 ```
 
-### A.3 已有知识库需要更新
+### A.2 Designer Wants to Skip Onboarding
 
 ```
-若设计师表示知识库内容过时需要更新：
-  → 读取现有文件，展示当前内容
-  → 引导设计师指出需要更新的部分
-  → 增量更新对应 L1 文件 + 同步 L0 索引
+If the designer requests to skip Onboarding:
+  → "Sure, we can skip it. Subsequent Phases will proceed without knowledge base background.
+     You can come back anytime to run Onboarding and build the knowledge base."
+  → Set onboarding.passes = true, do not create knowledge base files
+  → Proceed with normal transition to the next state
+```
+
+### A.3 Existing Knowledge Base Needs Updating
+
+```
+If the designer indicates the knowledge base content is outdated and needs updating:
+  → Read existing files, present current content
+  → Guide the designer to identify which parts need updating
+  → Incrementally update corresponding L1 files + sync L0 index
 ```

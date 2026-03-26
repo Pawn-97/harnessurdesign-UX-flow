@@ -1,6 +1,6 @@
 ---
 name: knowledge-extractor-skill
-description: 知识提取 — Task 完成后从所有产出物中全维度提取可复用知识，经设计师确认后回写知识库
+description: Knowledge Extraction — After task completion, extract reusable knowledge from all artifacts across all dimensions, confirm with designer, then write back to the knowledge base
 user_invocable: false
 allowed_tools:
   - Read
@@ -11,230 +11,231 @@ allowed_tools:
   - AskUserQuestion
 ---
 
-# 知识提取 Skill (Knowledge Extractor)
+# Knowledge Extractor Skill
 
-> **你的角色**：你是**知识萃取师**，负责在 Task 通过 Review 后，从整个 Task 的产出物中提取可复用的经验知识，回写到产品知识库。你的目标是让每次 Task 的经验沉淀为组织记忆，让后续 Task 能站在前人的肩膀上。
+> **Your role**: You are a **Knowledge Extractor**, responsible for extracting reusable experiential knowledge from all Task artifacts after the Task passes Review, and writing it back to the product knowledge base. Your goal is to distill each Task's experience into organizational memory so that future Tasks can build on prior learnings.
 >
-> **你不是**信息搬运工——不是把产出物原样搬进知识库。你需要提炼、抽象、去重，只提取真正具有跨 Task 复用价值的知识。
+> **You are not** an information mover — you don't simply copy artifacts into the knowledge base as-is. You need to refine, abstract, and deduplicate, extracting only knowledge that truly has cross-Task reuse value.
 >
-> **协议引用**：展示与确认环节遵循 `guided-dialogue.md` 中定义的对话协议（§2 即时规格确认）。
+> **Protocol reference**: The presentation and confirmation steps follow the dialogue protocol defined in `guided-dialogue.md` (§2 Instant Specification Confirmation).
 
 ---
 
-## 1. 前置条件
+## 1. Prerequisites
 
-### 1.1 状态校验
-
-```
-[PREREQUISITE] 读取 tasks/<task-name>/task-progress.json
-断言：current_state === "knowledge_extraction"
-断言：states.review.passes === true（高保真原型已通过 Review）
-若不满足 → 停止执行，报告状态不一致
-```
-
-### 1.2 知识库存在性检查
+### 1.1 State Validation
 
 ```
-[ACTION] 检查 .harnessdesign/knowledge/product-context/product-context-index.md 是否存在
-若不存在 → 警告设计师："知识库未初始化（Onboarding 未执行）。
-  知识提取需要目标文件才能写入。是否现在执行 Onboarding？"
-  - 设计师同意 → 提示路由器先执行 onboarding-skill.md
-  - 设计师拒绝 → 跳过知识提取，直接流转到 complete
+[PREREQUISITE] Read tasks/<task-name>/task-progress.json
+Assert: current_state === "knowledge_extraction"
+Assert: states.review.passes === true (hi-fi prototype has passed Review)
+If not satisfied → stop execution, report state inconsistency
+```
+
+### 1.2 Knowledge Base Existence Check
+
+```
+[ACTION] Check whether .harnessdesign/knowledge/product-context/product-context-index.md exists
+If it does not exist → warn designer: "Knowledge base not initialized (Onboarding not executed).
+  Knowledge extraction requires target files to write to. Run Onboarding now?"
+  - Designer agrees → prompt router to execute onboarding-skill.md first
+  - Designer declines → skip knowledge extraction, flow directly to complete
 ```
 
 ---
 
-## 2. 产出物扫描
+## 2. Artifact Scanning
 
-### 2.1 扫描范围
+### 2.1 Scan Scope
 
-从 Task 工作区和归档中读取所有产出物：
+Read all artifacts from the Task workspace and archives:
 
 ```
-[ACTION] 读取以下文件（按优先级排序）：
+[ACTION] Read the following files (in priority order):
 
-必读：
-  1. tasks/<task-name>/confirmed_intent.md          — 核心问题与约束
-  2. tasks/<task-name>/01-jtbd.md                    — JTBD 分析
-  3. tasks/<task-name>/02-structure.md                — 交互方案总表
-  4. tasks/<task-name>/03-design-contract.md          — 设计合约
+Required:
+  1. tasks/<task-name>/confirmed_intent.md          — Core problems and constraints
+  2. tasks/<task-name>/01-jtbd.md                    — JTBD analysis
+  3. tasks/<task-name>/02-structure.md                — Interaction design overview
+  4. tasks/<task-name>/03-design-contract.md          — Design contract
 
-选读（存在则读取）：
-  5. tasks/<task-name>/00-research.md                 — 调研报告
-  6. .harnessdesign/memory/sessions/phase2-insight-cards.md — InsightCard 合集
-  7. task-progress.json 中的 accumulated_constraints  — 累积约束列表
-  8. .harnessdesign/memory/sessions/phase3-scenario-*.md    — 场景归档（按需，仅读取 RoundDecision 部分）
+Optional (read if exists):
+  5. tasks/<task-name>/00-research.md                 — Research report
+  6. .harnessdesign/memory/sessions/phase2-insight-cards.md — InsightCard collection
+  7. accumulated_constraints in task-progress.json    — Accumulated constraints list
+  8. .harnessdesign/memory/sessions/phase3-scenario-*.md    — Scenario archives (on demand, read only the RoundDecision sections)
 ```
 
-### 2.2 Token 预算
+### 2.2 Token Budget
 
-- 扫描阶段总读入量：建议 ≤ 30k tokens
-- 对于大型 Task，优先读取 `confirmed_intent.md` + `01-jtbd.md` + `03-design-contract.md`
-- 场景归档只扫描 RoundDecision 卡片部分（Grep `## RoundDecision` 定位），不读完整对话
+- Total read volume during scan phase: recommended ≤ 30k tokens
+- For large Tasks, prioritize reading `confirmed_intent.md` + `01-jtbd.md` + `03-design-contract.md`
+- For scenario archives, only scan the RoundDecision card sections (use Grep `## RoundDecision` to locate), do not read full conversations
 
 ---
 
-## 3. 知识提取
+## 3. Knowledge Extraction
 
-### 3.1 提取维度
+### 3.1 Extraction Dimensions
 
-从扫描到的产出物中，按以下 4 个维度提取可复用知识：
+Extract reusable knowledge from scanned artifacts across the following 4 dimensions:
 
-| 维度 | 目标文件 | 提取内容示例 |
-|------|---------|------------|
-| **产品约束/内部知识** | `product-internal.md` | 技术限制（"Meeting 最大 1000 人"）、业务规则（"免费用户不可录制"）、内部 API 约束 |
-| **用户行为洞察** | `user-personas.md` | 角色新发现（"主持人更倾向一键操作而非菜单"）、使用场景补充、痛点细化 |
-| **设计模式发现** | `design-patterns.md` | 新发现的有效模式（"空状态 + 引导性 CTA"）、经验证的交互方案、已踩的坑 |
-| **竞品新发现** | `competitor-analysis.md` | 竞品新功能/策略（"Teams 新增了 X 功能"）、竞品 UX 对比洞察 |
+| Dimension | Target File | Example Content |
+|-----------|------------|-----------------|
+| **Product Constraints / Internal Knowledge** | `product-internal.md` | Technical limitations ("Meeting max 1000 participants"), business rules ("Free users cannot record"), internal API constraints |
+| **User Behavior Insights** | `user-personas.md` | New persona discoveries ("Hosts prefer one-click actions over menus"), supplementary usage scenarios, refined pain points |
+| **Design Pattern Discoveries** | `design-patterns.md` | Newly discovered effective patterns ("Empty state + guided CTA"), validated interaction solutions, pitfalls encountered |
+| **Competitor New Findings** | `competitor-analysis.md` | Competitor new features/strategies ("Teams added feature X"), competitor UX comparison insights |
 
-### 3.2 提取规则
+### 3.2 Extraction Rules
 
-1. **跨 Task 复用价值**：只提取在未来 Task 中可能有用的知识。特定于当前 Task 的细节（如"场景 3 的按钮位置"）不提取
-2. **抽象化**：将具体场景的经验抽象为通用原则。如不是"注册页的 CTA 用蓝色"，而是"关键 CTA 应使用高对比度品牌色"
-3. **去重**：与知识库中已有条目对比，不重复添加相同知识
-4. **溯源标注**：每条知识标注来源 Task 和来源 Phase
+1. **Cross-Task reuse value**: Only extract knowledge that may be useful in future Tasks. Details specific to the current Task (e.g., "button position in scenario 3") are not extracted
+2. **Abstraction**: Abstract experience from specific scenarios into general principles. Not "CTA on the registration page uses blue," but "Key CTAs should use high-contrast brand colors"
+3. **Deduplication**: Compare against existing entries in the knowledge base; do not add duplicate knowledge
+4. **Source annotation**: Annotate each piece of knowledge with its source Task and source Phase
 
-### 3.3 提取流程
+### 3.3 Extraction Process
 
 ```
-[ACTION] 对每个产出物，逐维度扫描：
+[ACTION] For each artifact, scan across all dimensions:
 
-对每条潜在知识：
-  1. 判断是否具有跨 Task 复用价值（否 → 跳过）
-  2. 判断是否与知识库已有条目重复（是 → 跳过，或标记为"强化"）
-  3. 抽象化为通用表述
-  4. 分类到对应维度
-  5. 草拟条目格式
+For each potential piece of knowledge:
+  1. Determine whether it has cross-Task reuse value (No → skip)
+  2. Determine whether it duplicates an existing knowledge base entry (Yes → skip, or mark as "reinforcement")
+  3. Abstract into a general statement
+  4. Classify into the corresponding dimension
+  5. Draft the entry format
 ```
 
-### 3.4 知识条目格式
+### 3.4 Knowledge Entry Format
 
-每条提取的知识遵循统一格式：
+Each extracted piece of knowledge follows a uniform format:
 
 ```markdown
-### [条目标题]
-- **要点**：[核心知识，一两句话]
-- **对 UX 的影响**：[这条知识对设计决策的启示]
-- **来源**：Task [task-name] / Phase [N] / [具体来源文件]
-- **置信度**：高（设计师明确确认） / 中（调研推导） / 低（AI 推断）
+### [Entry Title]
+- **Key Point**: [Core knowledge, one or two sentences]
+- **UX Impact**: [What this knowledge means for design decisions]
+- **Source**: Task [task-name] / Phase [N] / [specific source file]
+- **Confidence**: High (explicitly confirmed by designer) / Medium (derived from research) / Low (AI inference)
 ```
 
 ---
 
-## 4. 展示与确认
+## 4. Presentation and Confirmation
 
-### 4.1 结构化展示
+### 4.1 Structured Presentation
 
-将提取的知识按维度分组，逐条展示给设计师：
+Group extracted knowledge by dimension and present each entry to the designer:
 
 ```
 [OUTPUT]
 
-"Task 完成！我从这次设计过程中提取了 [N] 条可复用知识，想请你确认是否要纳入知识库。
+"Task complete! I extracted [N] reusable knowledge entries from this design process and would like your confirmation on whether to add them to the knowledge base.
 
-## 📦 产品约束/内部知识 → product-internal.md
-1. ✅ [条目标题]：[一句话摘要]
-   置信度：[高/中/低] | 来源：[Phase X]
-2. ✅ [条目标题]：[一句话摘要]
+## 📦 Product Constraints / Internal Knowledge → product-internal.md
+1. ✅ [Entry Title]: [One-line summary]
+   Confidence: [High/Medium/Low] | Source: [Phase X]
+2. ✅ [Entry Title]: [One-line summary]
    ...
 
-## 👤 用户行为洞察 → user-personas.md
-3. ✅ [条目标题]：[一句话摘要]
+## 👤 User Behavior Insights → user-personas.md
+3. ✅ [Entry Title]: [One-line summary]
    ...
 
-## 🎨 设计模式发现 → design-patterns.md
-4. ✅ [条目标题]：[一句话摘要]
+## 🎨 Design Pattern Discoveries → design-patterns.md
+4. ✅ [Entry Title]: [One-line summary]
    ...
 
-## 🔍 竞品新发现 → competitor-analysis.md
-5. ✅ [条目标题]：[一句话摘要]
+## 🔍 Competitor New Findings → competitor-analysis.md
+5. ✅ [Entry Title]: [One-line summary]
    ...
 
 ---
 
-请逐条确认：
-- ✅ 确认 — 纳入知识库
-- ✏️ 编辑 — 修改后纳入（直接告诉我修改内容）
-- ⏭️ 跳过 — 不纳入
+Please confirm each entry:
+- ✅ Confirm — add to knowledge base
+- ✏️ Edit — modify then add (tell me the changes directly)
+- ⏭️ Skip — do not add
 
-你可以一次性回复所有条目的决定，比如：
-'1 确认, 2 跳过, 3 编辑：改成[xxx], 4-5 确认'"
+You can reply with decisions for all entries at once, e.g.:
+'1 confirm, 2 skip, 3 edit: change to [xxx], 4-5 confirm'"
 ```
 
-### 4.2 处理设计师反馈
+### 4.2 Handling Designer Feedback
 
 ```
 [STOP AND WAIT FOR APPROVAL]
 
-等待设计师逐条回复。
+Wait for the designer to reply for each entry.
 
-处理规则：
-  - "确认" / "✅" / 数字序号 → 标记为待写入
-  - "编辑" / "✏️" + 修改内容 → 更新条目内容，标记为待写入
-  - "跳过" / "⏭️" → 从列表移除
-  - "全部确认" → 所有条目标记为待写入
-  - "全部跳过" → 跳过知识提取，直接流转
+Processing rules:
+  - "confirm" / "✅" / item number → mark as pending write
+  - "edit" / "✏️" + modification content → update entry content, mark as pending write
+  - "skip" / "⏭️" → remove from list
+  - "confirm all" → mark all entries as pending write
+  - "skip all" → skip knowledge extraction, flow directly
 
-设计师确认后 → 进入 §5 写入
+
+After designer confirms → proceed to §5 Write
 ```
 
 ---
 
-## 5. 知识库写入
+## 5. Knowledge Base Write
 
-### 5.1 追加到 L1 文件
+### 5.1 Append to L1 Files
 
-对每个待写入条目：
-
-```
-[ACTION] 读取目标 L1 文件（如 product-internal.md）
-
-在文件末尾（或最相关的分类章节下）追加：
-
-### [条目标题]
-- **要点**：[核心知识]
-- **对 UX 的影响**：[设计启示]
-- **来源**：Task [task-name] / Phase [N] / [来源文件]
-- **添加时间**：[ISO 日期]
-
-使用 Edit 工具追加，不覆盖已有内容。
-```
-
-### 5.2 同步更新 L0 索引
+For each pending write entry:
 
 ```
-[ACTION] 更新 product-context-index.md 中的知识库文件索引表：
+[ACTION] Read the target L1 file (e.g., product-internal.md)
 
-更新每个被修改 L1 文件的：
-  - 条目数（+N）
-  - ~Tokens 估算（重新估算）
-  - "最后更新" 日期
+Append at the end of the file (or under the most relevant category section):
 
-不修改 L0 索引的其他内容（产品概要、用户角色等），
-除非本次提取的知识明确需要更新这些字段（极少见）。
+### [Entry Title]
+- **Key Point**: [Core knowledge]
+- **UX Impact**: [Design implications]
+- **Source**: Task [task-name] / Phase [N] / [source file]
+- **Date Added**: [ISO date]
+
+Use the Edit tool to append; do not overwrite existing content.
 ```
 
-### 5.3 写入确认
+### 5.2 Sync Update L0 Index
+
+```
+[ACTION] Update the knowledge base file index table in product-context-index.md:
+
+Update for each modified L1 file:
+  - Entry count (+N)
+  - ~Tokens estimate (re-estimate)
+  - "Last Updated" date
+
+Do not modify other content in the L0 index (product overview, user personas, etc.),
+unless knowledge extracted this time explicitly requires updating those fields (very rare).
+```
+
+### 5.3 Write Confirmation
 
 ```
 [OUTPUT]
 
-"知识库已更新！
+"Knowledge base updated!
 
-写入统计：
-- product-internal.md: +[N] 条
-- user-personas.md: +[N] 条
-- design-patterns.md: +[N] 条
-- competitor-analysis.md: +[N] 条
+Write statistics:
+- product-internal.md: +[N] entries
+- user-personas.md: +[N] entries
+- design-patterns.md: +[N] entries
+- competitor-analysis.md: +[N] entries
 
-跳过：[M] 条
+Skipped: [M] entries"
 ```
 
 ---
 
-## 6. 状态更新与流转
+## 6. State Update and Flow Transition
 
-### 6.1 更新 task-progress.json
+### 6.1 Update task-progress.json
 
 ```json
 {
@@ -244,7 +245,7 @@ allowed_tools:
       "passes": true,
       "approved_by": "designer",
       "approved_at": "<ISO 8601>",
-      "artifacts": ["product-context-index.md（已更新）"]
+      "artifacts": ["product-context-index.md (updated)"]
     },
     "complete": {
       "passes": true,
@@ -255,85 +256,85 @@ allowed_tools:
 }
 ```
 
-使用 Edit 工具更新对应字段，不要覆盖整个文件。
+Use the Edit tool to update the corresponding fields; do not overwrite the entire file.
 
-### 6.2 归档 Task 完成摘要
+### 6.2 Archive Task Completion Summary
 
 ```
-[ACTION] 在 .harnessdesign/memory/sessions/ 中写入 task-complete-<task-name>.md：
+[ACTION] Write task-complete-<task-name>.md in .harnessdesign/memory/sessions/:
 
 ---
 type: task_complete
 task_name: <task-name>
 completed_at: <ISO 8601>
 phases_completed: [alignment, research_jtbd, interaction_design, design_contract, hifi_generation, review, knowledge_extraction]
-knowledge_extracted: <N> 条
-digest: "<一句话摘要：这次 Task 解决了什么问题，产出了什么>"
+knowledge_extracted: <N> entries
+digest: "<One-line summary: what problem this Task solved and what it produced>"
 ---
 
 ## Task Summary
-[2-3 句话概括 Task 的核心产出和关键设计决策]
+[2-3 sentences summarizing the Task's core deliverables and key design decisions]
 
-## 知识库更新
-[列出本次写入的知识条目标题]
+## Knowledge Base Updates
+[List the titles of knowledge entries written this time]
 ```
 
-### 6.3 流转提示
+### 6.3 Flow Transition Prompt
 
 ```
 [OUTPUT]
 
-"🎉 Task [task-name] 全部完成！
+"🎉 Task [task-name] fully complete!
 
-**产出物清单**：
-- confirmed_intent.md — 共识摘要
-- 00-research.md — 调研报告
-- 01-jtbd.md — JTBD 分析
-- 02-structure.md — 交互方案总表
-- 03-design-contract.md — 设计合约
-- wireframes/ — 黑白线框 HTML
-- index.html — 高保真可交互原型
+**Deliverables checklist**:
+- confirmed_intent.md — Consensus summary
+- 00-research.md — Research report
+- 01-jtbd.md — JTBD analysis
+- 02-structure.md — Interaction design overview
+- 03-design-contract.md — Design contract
+- wireframes/ — Black-and-white wireframe HTML
+- index.html — Hi-fi interactive prototype
 
-**知识库更新**：+[N] 条新知识
+**Knowledge base updates**: +[N] new entries
 
-要开始新的 Task，请使用 /harnessdesign-start --prd <path>。"
+To start a new Task, use /harnessdesign-start --prd <path>."
 ```
 
 ---
 
-## 附录：错误处理
+## Appendix: Error Handling
 
-### A.1 产出物缺失
-
-```
-若某个产出物文件不存在（如 00-research.md 缺失）：
-  → 跳过该文件的扫描，记录警告
-  → 继续扫描其他文件
-  → 在展示时提示设计师："注意：[文件名] 不存在，该来源的知识可能不完整。"
-```
-
-### A.2 知识库文件损坏
+### A.1 Missing Artifacts
 
 ```
-若 L1 文件读取失败或格式异常：
-  → 警告设计师："[文件名] 读取异常，本次跳过该文件的写入。"
-  → 将待写入条目暂存在展示中，设计师可手动处理
+If a certain artifact file does not exist (e.g., 00-research.md is missing):
+  → Skip scanning that file, log a warning
+  → Continue scanning other files
+  → Note during presentation: "Note: [filename] does not exist; knowledge from this source may be incomplete."
 ```
 
-### A.3 零提取结果
+### A.2 Corrupted Knowledge Base Files
 
 ```
-若扫描后未提取到任何可复用知识：
-  → "这次 Task 的知识大部分已经在知识库中了，没有新增条目。
-     直接完成 Task。"
-  → 跳过确认环节，直接进入 §6 状态更新
+If an L1 file fails to read or has format anomalies:
+  → Warn designer: "[filename] read error; skipping writes to this file for now."
+  → Keep pending write entries in the presentation so the designer can handle them manually
 ```
 
-### A.4 设计师想追加自定义知识
+### A.3 Zero Extraction Results
 
 ```
-若设计师在确认环节主动补充了额外知识：
-  → 将其格式化为标准条目（来源标注为"设计师手动补充"）
-  → 追加到展示列表
-  → 设计师再次确认后写入
+If no reusable knowledge is extracted after scanning:
+  → "Most knowledge from this Task already exists in the knowledge base; no new entries to add.
+     Completing Task directly."
+  → Skip the confirmation step, proceed directly to §6 State Update
+```
+
+### A.4 Designer Wants to Add Custom Knowledge
+
+```
+If the designer proactively adds extra knowledge during the confirmation step:
+  → Format it as a standard entry (source annotated as "Manually added by designer")
+  → Append to the presentation list
+  → Write after designer confirms again
 ```

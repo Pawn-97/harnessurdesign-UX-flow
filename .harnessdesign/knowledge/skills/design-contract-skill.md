@@ -1,6 +1,6 @@
 ---
 name: design-contract-skill
-description: Phase 3→4 过渡 — 从场景归档中提取 ScenarioContract、合成 DesignContract、双向校验完备性，反上下文饥饿
+description: Phase 3→4 Transition — Extract ScenarioContracts from scenario archives, synthesize DesignContract, bidirectional completeness validation, anti-context-starvation
 user_invocable: false
 allowed_tools:
   - Read
@@ -13,181 +13,181 @@ allowed_tools:
   - AskUserQuestion
 ---
 
-# Phase 3→4 过渡: 设计合约生成 Skill (Design Contract Generator)
+# Phase 3→4 Transition: Design Contract Generator Skill
 
-> **你的角色**：你是**跨场景信息提取器**，负责从 Phase 3 所有场景归档中定向提取导航拓扑、交互承诺和全局约束，合成结构化设计合约。你的产出是 Phase 4 高保真生成的蓝图。
+> **Your Role**: You are a **cross-scenario information extractor**, responsible for directionally extracting navigation topology, interaction commitments, and global constraints from all Phase 3 scenario archives, then synthesizing them into a structured design contract. Your output serves as the blueprint for Phase 4 high-fidelity generation.
 >
-> **为什么需要这一步**：Phase 3 的场景级压缩（每场景 ~200 tokens 摘要）会丢失跨场景导航拓扑、具体交互承诺和全局设计约束。Design Contract 机制在进入 Phase 4 前定向提取这些关键信息，确保 Alchemist 拥有生成跨场景一致原型所需的全部上下文。
+> **Why This Step Is Needed**: Phase 3's scenario-level compression (~200 tokens summary per scenario) loses cross-scenario navigation topology, specific interaction commitments, and global design constraints. The Design Contract mechanism directionally extracts this critical information before entering Phase 4, ensuring Alchemist has all the context needed to generate a cross-scenario consistent prototype.
 >
-> **协议引用**：本 Skill 在设计师 Review 环节遵循 `guided-dialogue.md` 中定义的对话协议。
+> **Protocol Reference**: This Skill follows the dialogue protocol defined in `guided-dialogue.md` during the designer Review phase.
 
 ---
 
-## 0. 内部阶段总览
+## 0. Internal Stage Overview
 
 ```
-[加载上下文] → [并发场景提取 ScenarioContract]
+[Load Context] → [Concurrent Scenario Extraction ScenarioContract]
                      ↓
-              [全局合约合成 DesignContract]
+              [Global Contract Synthesis DesignContract]
                      ↓
-              [双向校验 + GAP 标注]
+              [Bidirectional Validation + GAP Annotation]
                      ↓
-              [写入 03-design-contract.md]
+              [Write to 03-design-contract.md]
                      ↓
-              [摘要索引回填]
+              [Summary Index Backfill]
                      ↓
-              [STOP: 设计师 Review/编辑合约]
+              [STOP: Designer Review/Edit Contract]
                      ↓
-              [流转到 hifi_generation]
-```
-
----
-
-## 1. 前置条件与上下文加载
-
-### 1.1 状态校验
-
-```
-[PREREQUISITE] 读取 tasks/<task-name>/task-progress.json
-断言：current_state === "prepare_design_contract"
-断言：states.interaction_design.passes === true
-断言：所有 scenarios 的 status 均为 "archived" 或 "skipped"
-若不满足 → 停止执行，报告状态不一致
-```
-
-### 1.2 加载锚定层
-
-```
-[ACTION] 读取以下文件到锚定层（始终存在于上下文中）：
-1. tasks/<task-name>/confirmed_intent.md（~500 tokens，Phase 1 产出）
-2. .harnessdesign/knowledge/product-context/product-context-index.md（L0，若存在）
-3. 摘要索引（从 task-progress.json.archive_index 重建）
-```
-
-### 1.3 加载工作层
-
-```
-[ACTION] 读取以下文件到工作层：
-1. tasks/<task-name>/02-structure.md（交互方案总表，Phase 3 产出）
-2. task-progress.json 中的 scenarios 字段（获取场景列表和归档路径）
+              [Transition to hifi_generation]
 ```
 
 ---
 
-## 2. 并发场景提取 — ScenarioContract
+## 1. Prerequisites and Context Loading
 
-### 2.1 提取流程
-
-对 `task-progress.json.states.interaction_design.scenarios` 中每个 `status === "archived"` 的场景执行提取：
+### 1.1 State Validation
 
 ```
-[ACTION] 对每个已完成场景，读取：
-1. .harnessdesign/memory/sessions/phase3-scenario-{n}.md（场景归档，含 RoundDecision 汇总）
-2. .harnessdesign/memory/sessions/phase3-scenario-{n}-round-{m}.md（各轮次 Recall Buffer，按需）
-
-从归档中提取 ScenarioContract。
+[PREREQUISITE] Read tasks/<task-name>/task-progress.json
+Assert: current_state === "prepare_design_contract"
+Assert: states.interaction_design.passes === true
+Assert: All scenarios have status "archived" or "skipped"
+If not satisfied → Stop execution, report state inconsistency
 ```
 
-> **并行能力**：N 个场景的提取相互独立，可利用 AI 工具的 Agent 并行能力并发执行。每个场景独立产出 ScenarioContract，符合 Assembler Pattern 原则。
+### 1.2 Load Anchor Layer
 
-### 2.2 ScenarioContract 结构
+```
+[ACTION] Read the following files into the anchor layer (always present in context):
+1. tasks/<task-name>/confirmed_intent.md (~500 tokens, Phase 1 output)
+2. .harnessdesign/knowledge/product-context/product-context-index.md (L0, if exists)
+3. Summary index (reconstructed from task-progress.json.archive_index)
+```
 
-对每个场景提取以下结构：
+### 1.3 Load Working Layer
+
+```
+[ACTION] Read the following files into the working layer:
+1. tasks/<task-name>/02-structure.md (interaction plan summary table, Phase 3 output)
+2. scenarios field from task-progress.json (get scenario list and archive paths)
+```
+
+---
+
+## 2. Concurrent Scenario Extraction — ScenarioContract
+
+### 2.1 Extraction Process
+
+For each scenario with `status === "archived"` in `task-progress.json.states.interaction_design.scenarios`, perform extraction:
+
+```
+[ACTION] For each completed scenario, read:
+1. .harnessdesign/memory/sessions/phase3-scenario-{n}.md (scenario archive, containing RoundDecision summary)
+2. .harnessdesign/memory/sessions/phase3-scenario-{n}-round-{m}.md (per-round Recall Buffer, as needed)
+
+Extract ScenarioContract from the archive.
+```
+
+> **Parallel Capability**: Extraction of N scenarios is mutually independent and can leverage AI tool Agent parallelism for concurrent execution. Each scenario independently produces a ScenarioContract, following the Assembler Pattern principle.
+
+### 2.2 ScenarioContract Structure
+
+Extract the following structure for each scenario:
 
 ```yaml
-# ScenarioContract（单场景的设计合约）
+# ScenarioContract (design contract for a single scenario)
 
 scenario_id: "scenario-1"
-scenario_name: "会前准备"
-selected_option_summary: "时间线视图，支持拖拽排序议程项"  # ~100 tokens
+scenario_name: "Pre-meeting Preparation"
+selected_option_summary: "Timeline view with drag-to-reorder agenda items"  # ~100 tokens
 
-# 入口条件
+# Entry Conditions
 entry_conditions:
-  - source_scenario: "scenario-0"       # 或 "external"（首场景）
-    trigger: "用户点击'准备会议'"
+  - source_scenario: "scenario-0"       # or "external" (first scenario)
+    trigger: "User clicks 'Prepare Meeting'"
     shared_state_changes:
       - "current_flow → prep"
 
-# 出口动作
+# Exit Actions
 exit_actions:
   - target_scenario: "scenario-2"
-    trigger: "用户点击'完成准备'"
+    trigger: "User clicks 'Finish Preparation'"
     shared_state_changes:
       - "meeting_status → prepared"
 
-# 共享状态依赖
+# Shared State Dependencies
 shared_state_dependencies:
   consumed_from:
-    - "current_user（来自登录流程）"
-    - "meeting_info（来自会议列表）"
+    - "current_user (from login flow)"
+    - "meeting_info (from meeting list)"
   produced_for:
-    - "agenda_items（供场景 2 消费）"
-    - "meeting_status（供场景 3 检查）"
+    - "agenda_items (consumed by scenario 2)"
+    - "meeting_status (checked by scenario 3)"
 
-# 交互承诺（从 RoundDecision.interaction_details 提取，max 5 条）
+# Interaction Commitments (extracted from RoundDecision.interaction_details, max 5 items)
 interaction_commitments:
-  - "列表项支持拖拽排序，拖拽时显示占位虚线框"
-  - "空状态使用插画 + 引导文案 + CTA 按钮"
-  - "时间线视图支持折叠/展开"
-  # ... max 5 条最关键的交互决策
+  - "List items support drag-to-reorder; a dashed placeholder frame appears during drag"
+  - "Empty state uses illustration + guidance copy + CTA button"
+  - "Timeline view supports collapse/expand"
+  # ... max 5 most critical interaction decisions
 
-# 全局约束（从 RoundDecision.constraints_added 提取）
+# Global Constraints (extracted from RoundDecision.constraints_added)
 global_constraints:
-  - "首屏不超过 5 个交互模块"
-  - "不使用纯文字空状态"
+  - "First screen has no more than 5 interaction modules"
+  - "No plain-text empty states"
 
-# 边缘态清单
+# Edge Cases Checklist
 edge_cases_to_handle:
-  - "0 个议程项 → 空状态"
-  - "权限不足 → 错误提示 + 跳转"
-  - "网络中断 → 重试按钮"
+  - "0 agenda items → empty state"
+  - "Insufficient permissions → error prompt + redirect"
+  - "Network interruption → retry button"
 ```
 
-### 2.3 提取质量检查
+### 2.3 Extraction Quality Check
 
-对每个 ScenarioContract 执行以下检查：
+Perform the following checks on each ScenarioContract:
 
 ```
-[CHECK] ScenarioContract 完备性检查：
-- [ ] entry_conditions 至少 1 条（首场景可为 "external"）
-- [ ] exit_actions 至少 1 条（末尾场景可为 "task_complete"）
-- [ ] interaction_commitments ≤ 5 条，每条来自 RoundDecision.interaction_details
-- [ ] edge_cases_to_handle 至少包含：空状态、错误态
-- [ ] selected_option_summary 不超过 100 tokens
+[CHECK] ScenarioContract completeness check:
+- [ ] entry_conditions has at least 1 entry (first scenario may be "external")
+- [ ] exit_actions has at least 1 entry (final scenario may be "task_complete")
+- [ ] interaction_commitments ≤ 5 items, each sourced from RoundDecision.interaction_details
+- [ ] edge_cases_to_handle includes at minimum: empty state, error state
+- [ ] selected_option_summary does not exceed 100 tokens
 ```
 
-缺失项标注 `[⚠️ GAP]` 并补充合理推断（标记 `[auto-补充]`）。
+Missing items are annotated with `[⚠️ GAP]` and supplemented with reasonable inferences (marked `[auto-inferred]`).
 
 ---
 
-## 3. 全局合约合成 — DesignContract
+## 3. Global Contract Synthesis — DesignContract
 
-### 3.1 合成输入
+### 3.1 Synthesis Inputs
 
 ```
-[ACTION] 将以下内容合成为 DesignContract：
-1. 所有 ScenarioContract（N 个）
-2. 02-structure.md（交互方案总表）
-3. confirmed_intent.md（核心问题、约束条件、成功标准）
+[ACTION] Synthesize the following into a DesignContract:
+1. All ScenarioContracts (N total)
+2. 02-structure.md (interaction plan summary table)
+3. confirmed_intent.md (core problem, constraints, success criteria)
 ```
 
-### 3.2 DesignContract 结构
+### 3.2 DesignContract Structure
 
 ```yaml
-# DesignContract（Phase 4 高保真生成的完整设计合约）
+# DesignContract (complete design contract for Phase 4 high-fidelity generation)
 
-# 导航拓扑图
+# Navigation Topology Map
 navigation_topology:
-  entry_point: "scenario-1"             # 用户进入的第一个场景
-  adjacency:                            # 场景间连接关系
+  entry_point: "scenario-1"             # First scenario the user enters
+  adjacency:                            # Inter-scenario connections
     scenario-1: ["scenario-2"]
     scenario-2: ["scenario-3", "scenario-1"]
-    scenario-3: []                      # 终点场景
+    scenario-3: []                      # Terminal scenario
 
-# 共享状态模型
+# Shared State Model
 shared_state_model:
   - name: "current_user"
-    type: "User 对象"
+    type: "User object"
     produced_by: ["auth_flow"]
     consumed_by: ["scenario-1", "scenario-2", "scenario-3"]
   - name: "agenda_items"
@@ -195,327 +195,327 @@ shared_state_model:
     produced_by: ["scenario-1"]
     consumed_by: ["scenario-2"]
 
-# 全局设计约束（从所有 ScenarioContract 中去重合并）
+# Global Design Constraints (deduplicated and merged from all ScenarioContracts)
 global_constraints:
-  - "首屏交互模块数 ≤ 5"
-  - "不使用纯文字空状态"
-  - "动效时长 ≤ 300ms"
-  # ... 去重后的完整约束列表
+  - "First screen interaction modules ≤ 5"
+  - "No plain-text empty states"
+  - "Animation duration ≤ 300ms"
+  # ... complete deduplicated constraint list
 
-# 视觉一致性规则（从约束推导）
+# Visual Consistency Rules (derived from constraints)
 visual_consistency_rules:
-  - "所有场景使用统一的侧边栏导航"
-  - "按钮圆角统一 8px"
-  - "信息密度控制：每屏 ≤ 12 个交互元素"
-  # ... 从 confirmed_intent 和 constraints 推导
+  - "All scenarios use a unified sidebar navigation"
+  - "Button border-radius uniformly 8px"
+  - "Information density control: ≤ 12 interactive elements per screen"
+  # ... derived from confirmed_intent and constraints
 
-# 各场景合约
+# Per-Scenario Contracts
 scenarios:
   - scenario_id: "scenario-1"
-    scenario_name: "会前准备"
+    scenario_name: "Pre-meeting Preparation"
     selected_option_summary: "..."
     entry_conditions: [...]
     exit_actions: [...]
     interaction_commitments: [...]
     edge_cases_to_handle: [...]
-  # ... 完整 ScenarioContract 列表
+  # ... complete ScenarioContract list
 
-# 聚合边缘态清单
+# Aggregated Edge Cases Checklist
 edge_cases_to_handle:
-  - category: "空状态"
+  - category: "Empty State"
     scenarios: ["scenario-1", "scenario-3"]
-    pattern: "[ZDS:zds-empty-state] 插画 + 引导文案"
-  - category: "网络错误"
+    pattern: "[ZDS:zds-empty-state] illustration + guidance copy"
+  - category: "Network Error"
     scenarios: ["all"]
-    pattern: "Toast 提示 + 重试按钮"
-  - category: "权限缺失"
+    pattern: "Toast notification + retry button"
+  - category: "Missing Permissions"
     scenarios: ["scenario-1"]
-    pattern: "错误页 + 跳转建议"
+    pattern: "Error page + redirect suggestion"
 ```
 
-### 3.3 约束去重合并规则
+### 3.3 Constraint Deduplication and Merge Rules
 
 ```
-[RULE] 合并 global_constraints 时：
-1. 精确匹配 → 去重保留
-2. 同维度冲突（如"≤ 5 模块" vs "≤ 7 模块"）→ 保留更严格的约束，标注来源场景
-3. 隐含重复（如"不使用弹窗"和"避免 modal"）→ 统一为一条，注明覆盖范围
+[RULE] When merging global_constraints:
+1. Exact match → deduplicate and keep one
+2. Same-dimension conflict (e.g., "≤ 5 modules" vs "≤ 7 modules") → keep the stricter constraint, annotate source scenario
+3. Implicit duplication (e.g., "no popups" and "avoid modals") → unify into one entry, note coverage scope
 ```
 
 ---
 
-## 4. 双向校验
+## 4. Bidirectional Validation
 
-### 4.1 前向校验（承诺完整性）
-
-```
-[CHECK] 对每个 ScenarioContract 的 interaction_commitments：
-- 追溯到原始 phase3-scenario-{n}.md 归档中的 RoundDecision
-- 确认每个承诺都有对应的 RoundDecision.interaction_details 支撑
-- 无支撑的承诺 → 标注 [⚠️ GAP: 无原始依据]
-```
-
-### 4.2 反向校验（结构完整性）
+### 4.1 Forward Validation (Commitment Completeness)
 
 ```
-[CHECK] 结构完整性检查：
-- [ ] 每个场景至少 1 个 entry_condition（首场景可为 external）
-- [ ] 每个场景至少 1 个 exit_action（终点场景可为 task_complete）
-- [ ] navigation_topology.adjacency 无孤岛场景（所有场景可达）
-- [ ] navigation_topology 无死胡同（除明确的终点场景外）
-- [ ] shared_state_model 中每个 state 的 produced_by 和 consumed_by 都非空
-- [ ] shared_state_model 无未消费的状态（produced 但不 consumed → 标注 [⚠️ GAP]）
-- [ ] shared_state_model 无未生产的依赖（consumed 但不 produced → 标注 [⚠️ GAP]）
+[CHECK] For each ScenarioContract's interaction_commitments:
+- Trace back to original RoundDecision in phase3-scenario-{n}.md archive
+- Confirm each commitment has supporting RoundDecision.interaction_details
+- Unsupported commitments → annotate [⚠️ GAP: no original basis]
 ```
 
-### 4.3 GAP 处理
+### 4.2 Reverse Validation (Structural Completeness)
 
-- 所有 `[⚠️ GAP]` 项在输出时高亮显示
-- AI 为每个 GAP 提供合理推断并标记 `[auto-补充]`
-- 设计师在 Review 时逐一确认/修改/删除
+```
+[CHECK] Structural completeness check:
+- [ ] Each scenario has at least 1 entry_condition (first scenario may be external)
+- [ ] Each scenario has at least 1 exit_action (terminal scenario may be task_complete)
+- [ ] navigation_topology.adjacency has no isolated scenarios (all scenarios reachable)
+- [ ] navigation_topology has no dead ends (except explicitly terminal scenarios)
+- [ ] Each state in shared_state_model has non-empty produced_by and consumed_by
+- [ ] shared_state_model has no unconsumed states (produced but not consumed → annotate [⚠️ GAP])
+- [ ] shared_state_model has no unproduced dependencies (consumed but not produced → annotate [⚠️ GAP])
+```
+
+### 4.3 GAP Handling
+
+- All `[⚠️ GAP]` items are highlighted in the output
+- AI provides reasonable inferences for each GAP, marked `[auto-inferred]`
+- Designer confirms/modifies/deletes each during Review
 
 ---
 
-## 5. 产出与写入
+## 5. Output and Write
 
-### 5.1 写入 03-design-contract.md
+### 5.1 Write 03-design-contract.md
 
 ```
-[ACTION] 写入 tasks/<task-name>/03-design-contract.md
+[ACTION] Write to tasks/<task-name>/03-design-contract.md
 
-文档格式为纯 Markdown（设计师可在 IDE 中直接编辑），结构如下：
+Document format is plain Markdown (designer can edit directly in IDE), structured as follows:
 ```
 
 ```markdown
-# 设计合约 (Design Contract)
+# Design Contract
 
-> 本文档是 Phase 4 高保真生成的蓝图。修改此文件将直接影响生成的原型。
-> 标注 [⚠️ GAP] 的条目需要设计师确认。标注 [auto-补充] 的条目由 AI 推断补充。
+> This document is the blueprint for Phase 4 high-fidelity generation. Modifying this file will directly affect the generated prototype.
+> Items annotated with [⚠️ GAP] require designer confirmation. Items annotated with [auto-inferred] were supplemented by AI inference.
 
-## 导航拓扑
+## Navigation Topology
 
-**入口场景**：[场景名称]
+**Entry Scenario**: [scenario name]
 
-**场景间连接**：
-| 从 | 到 | 触发条件 |
-|----|----|---------|
-| 场景 1 | 场景 2 | [触发描述] |
+**Inter-Scenario Connections**:
+| From | To | Trigger Condition |
+|------|----|-------------------|
+| Scenario 1 | Scenario 2 | [trigger description] |
 | ... | ... | ... |
 
-## 共享状态模型
+## Shared State Model
 
-| 状态名称 | 类型 | 生产场景 | 消费场景 |
-|---------|------|---------|---------|
-| current_user | User | auth_flow | 场景 1, 2, 3 |
+| State Name | Type | Producing Scenario | Consuming Scenario |
+|-----------|------|-------------------|-------------------|
+| current_user | User | auth_flow | Scenario 1, 2, 3 |
 | ... | ... | ... | ... |
 
-## 全局设计约束
+## Global Design Constraints
 
-1. [约束内容]（来源：场景 N）
-2. [约束内容]（来源：场景 M, N）
+1. [Constraint content] (Source: Scenario N)
+2. [Constraint content] (Source: Scenario M, N)
 ...
 
-## 视觉一致性规则
+## Visual Consistency Rules
 
-1. [规则内容]
-2. [规则内容]
+1. [Rule content]
+2. [Rule content]
 ...
 
-## 各场景合约
+## Per-Scenario Contracts
 
-### 场景 1: [场景名称]
+### Scenario 1: [Scenario Name]
 
-**选定方案**：[方案摘要]
+**Selected Option**: [option summary]
 
-**入口条件**：
-- 来自 [场景/外部]，触发：[条件]
+**Entry Conditions**:
+- From [scenario/external], trigger: [condition]
 
-**出口动作**：
-- 前往 [场景]，触发：[条件]
+**Exit Actions**:
+- Navigate to [scenario], trigger: [condition]
 
-**交互承诺**：
-1. [具体交互决策]
-2. [具体交互决策]
-...（max 5 条）
+**Interaction Commitments**:
+1. [specific interaction decision]
+2. [specific interaction decision]
+... (max 5 items)
 
-**边缘态处理**：
-- [边缘态] → [处理方式]
+**Edge Case Handling**:
+- [edge case] → [handling approach]
 ...
 
-### 场景 2: [场景名称]
+### Scenario 2: [Scenario Name]
 ...
 
-## 聚合边缘态清单
+## Aggregated Edge Cases Checklist
 
-| 类别 | 涉及场景 | 统一处理模式 |
-|------|---------|------------|
-| 空状态 | 场景 1, 3 | [ZDS:zds-empty-state] 插画 + 引导文案 |
-| 网络错误 | 所有 | Toast 提示 + 重试按钮 |
+| Category | Affected Scenarios | Unified Handling Pattern |
+|----------|-------------------|------------------------|
+| Empty State | Scenario 1, 3 | [ZDS:zds-empty-state] illustration + guidance copy |
+| Network Error | All | Toast notification + retry button |
 | ... | ... | ... |
 
-## GAP 清单（需设计师确认）
+## GAP Checklist (Requires Designer Confirmation)
 
-- [ ] [⚠️ GAP] [GAP 描述]（[auto-补充]: [AI 推断内容]）
+- [ ] [⚠️ GAP] [GAP description] ([auto-inferred]: [AI inference content])
 ...
 ```
 
-### 5.2 摘要索引回填
+### 5.2 Summary Index Backfill
 
 ```
-[ACTION] 从所有 ScenarioContract 中提取语义标签，回填到摘要索引：
+[ACTION] Extract semantic tags from all ScenarioContracts and backfill into the summary index:
 
-从 shared_state_dependencies 提取：
-- [状态:xxx] 标签（如 [状态:current_user], [状态:agenda_items]）
+From shared_state_dependencies extract:
+- [state:xxx] tags (e.g., [state:current_user], [state:agenda_items])
 
-从 exit_actions 提取：
-- [依赖:→场景N] 标签（如 [依赖:→场景2], [依赖:→场景3]）
+From exit_actions extract:
+- [dependency:→scenarioN] tags (e.g., [dependency:→scenario2], [dependency:→scenario3])
 
-回填到锚定层摘要索引中已有的场景条目。
-这一步补全了场景完成时无法确定性提取的跨场景维度标签。
+Backfill into existing scenario entries in the anchor layer summary index.
+This step completes the cross-scenario dimension tags that could not be deterministically extracted at scenario completion time.
 ```
 
 ---
 
-## 6. 更新 task-progress.json
+## 6. Update task-progress.json
 
 ```
-[ACTION] 使用 Edit 工具更新 task-progress.json：
+[ACTION] Use Edit tool to update task-progress.json:
 
 1. states.prepare_design_contract.passes = true
-2. states.prepare_design_contract.approved_by = null（待设计师确认）
+2. states.prepare_design_contract.approved_by = null (pending designer confirmation)
 3. states.prepare_design_contract.artifacts = ["03-design-contract.md"]
 4. current_state = "contract_review"
 
-在 archive_index 中追加：
+Append to archive_index:
 {
   "file": "03-design-contract.md",
   "type": "design_contract",
   "phase": "3→4",
-  "digest": "设计合约：N 个场景的导航拓扑、交互承诺和全局约束"
+  "digest": "Design contract: navigation topology, interaction commitments, and global constraints for N scenarios"
 }
 ```
 
 ---
 
-## 7. 设计师 Review
+## 7. Designer Review
 
-### 7.1 呈现合约
+### 7.1 Present the Contract
 
 ```
 [OUTPUT]
 
-"设计合约已生成，保存在 03-design-contract.md。
+"The design contract has been generated and saved to 03-design-contract.md.
 
-**概览**：
-- 共 {N} 个场景，入口场景：{场景名称}
-- 共享状态：{M} 个跨场景状态变量
-- 全局约束：{K} 条
-- 交互承诺：共 {J} 条（各场景合计）
+**Overview**:
+- {N} scenarios in total, entry scenario: {scenario name}
+- Shared state: {M} cross-scenario state variables
+- Global constraints: {K} items
+- Interaction commitments: {J} items total (across all scenarios)
 
-**需要关注的 GAP**：
-{列出所有 [⚠️ GAP] 项及 [auto-补充] 内容}
+**GAPs Requiring Attention**:
+{List all [⚠️ GAP] items with [auto-inferred] content}
 
-请在 IDE 中打开 03-design-contract.md 进行 Review。
-你可以直接编辑文件内容，或在对话中告诉我修改意见。"
+Please open 03-design-contract.md in your IDE for Review.
+You can edit the file content directly, or share your revision feedback in the conversation."
 ```
 
-### 7.2 等待确认
+### 7.2 Wait for Confirmation
 
 ```
 [STOP AND WAIT FOR APPROVAL]
 
-等待设计师对设计合约的确认。
+Wait for the designer's confirmation on the design contract.
 
-可能的回复：
-- Approve → §7.3 流转
-- 修改意见 → 按 guided-dialogue.md §3 语义合并：
-  合并设计师 feedback 与当前合约，更新 03-design-contract.md
-  严禁简单重新生成
-- 直接编辑文件 → 重新读取文件确认变更，更新摘要索引
+Possible responses:
+- Approve → §7.3 Transition
+- Revision feedback → Follow guided-dialogue.md §3 semantic merge:
+  Merge designer feedback with current contract, update 03-design-contract.md
+  Never simply regenerate from scratch
+- Direct file edit → Re-read the file to confirm changes, update summary index
 ```
 
-### 7.3 确认后流转
+### 7.3 Post-Confirmation Transition
 
 ```
-[ACTION] 设计师确认后：
+[ACTION] After designer confirms:
 
-1. 更新 task-progress.json：
+1. Update task-progress.json:
    - states.contract_review.passes = true
    - states.contract_review.approved_by = "designer"
    - states.contract_review.approved_at = "<ISO 8601>"
    - current_state = "hifi_generation"
 
-2. 输出流转提示：
+2. Output transition prompt:
 ```
 
 ```
 [OUTPUT]
 
-"设计合约已确认。
+"Design contract confirmed.
 
-即将进入 → Phase 4 高保真原型生成。
-Alchemist 将以设计合约为蓝图，整合 ZDS 设计规范，
-生成包含所有 {N} 个交互场景的完整高保真可交互 HTML。
+Proceeding to → Phase 4 High-Fidelity Prototype Generation.
+Alchemist will use the design contract as its blueprint, integrate ZDS design specifications,
+and generate a complete high-fidelity interactive HTML covering all {N} interaction scenarios.
 
 [Continue]"
 ```
 
 ---
 
-## 附录 A: Token 预算分析
+## Appendix A: Token Budget Analysis
 
-### 提取阶段工作层
+### Extraction Stage Working Layer
 
-| 组件 | Token 预算 | 说明 |
-|------|-----------|------|
-| 锚定层 | ~5-6k | confirmed_intent + L0 + 摘要索引 |
-| 02-structure.md | ~1-2k | 方案总表 |
-| 单场景归档（提取中） | ~3-5k | phase3-scenario-{n}.md |
-| ScenarioContract 输出 | ~500 | 单场景提取结果 |
-| **单场景提取峰值** | **~10-13k** | |
+| Component | Token Budget | Notes |
+|-----------|-------------|-------|
+| Anchor layer | ~5-6k | confirmed_intent + L0 + summary index |
+| 02-structure.md | ~1-2k | Plan summary table |
+| Single scenario archive (during extraction) | ~3-5k | phase3-scenario-{n}.md |
+| ScenarioContract output | ~500 | Single scenario extraction result |
+| **Single scenario extraction peak** | **~10-13k** | |
 
-### 合成阶段工作层
+### Synthesis Stage Working Layer
 
-| 组件 | Token 预算 | 说明 |
-|------|-----------|------|
-| 锚定层 | ~5-6k | 常驻 |
-| 所有 ScenarioContract | ~500 × N | N 个场景的提取结果 |
-| 02-structure.md | ~1-2k | 参考 |
-| DesignContract 输出 | ~3-5k | 最终合约 |
-| **合成峰值** | **~12-18k** | 取决于场景数 |
+| Component | Token Budget | Notes |
+|-----------|-------------|-------|
+| Anchor layer | ~5-6k | Always resident |
+| All ScenarioContracts | ~500 × N | Extraction results for N scenarios |
+| 02-structure.md | ~1-2k | Reference |
+| DesignContract output | ~3-5k | Final contract |
+| **Synthesis peak** | **~12-18k** | Depends on number of scenarios |
 
 ---
 
-## 附录 B: 错误处理
+## Appendix B: Error Handling
 
-### B.1 场景归档文件缺失
-
-```
-→ 检查 task-progress.json.states.interaction_design.scenarios[n].archived_to
-→ 若路径无效 → 报告："场景 {n} 归档文件缺失，请检查 Phase 3 归档是否完成"
-→ 可从 02-structure.md 中该场景的条目做降级提取（信息量减少，标注 [⚠️ 降级提取]）
-```
-
-### B.2 RoundDecision 缺失或不完整
+### B.1 Missing Scenario Archive File
 
 ```
-→ 从场景归档的"RoundDecision 汇总"章节中提取
-→ 若汇总章节也缺失 → 从 round Recall Buffer 中逐轮搜索
-→ 仍然缺失 → 该场景的 interaction_commitments 标注 [⚠️ GAP: RoundDecision 不可用]
+→ Check task-progress.json.states.interaction_design.scenarios[n].archived_to
+→ If path is invalid → report: "Scenario {n} archive file is missing, please verify Phase 3 archiving completed"
+→ Can perform degraded extraction from that scenario's entry in 02-structure.md (reduced information, annotate [⚠️ degraded extraction])
 ```
 
-### B.3 跳过的场景
+### B.2 Missing or Incomplete RoundDecision
 
 ```
-→ status === "skipped" 的场景不提取 ScenarioContract
-→ 在 DesignContract 中标注该场景为 [已跳过]
-→ 若其他场景存在对该场景的 entry/exit 依赖 → 标注 [⚠️ GAP: 被跳过场景存在依赖]
+→ Extract from the "RoundDecision Summary" section in the scenario archive
+→ If summary section is also missing → search round-by-round from round Recall Buffer
+→ Still missing → annotate that scenario's interaction_commitments with [⚠️ GAP: RoundDecision unavailable]
 ```
 
-### B.4 03-design-contract.md 写入失败
+### B.3 Skipped Scenarios
 
 ```
-→ 将 DesignContract 内容输出到对话中
-→ 请设计师手动保存为 03-design-contract.md
-→ 重试写入
+→ Scenarios with status === "skipped" do not get ScenarioContract extraction
+→ Annotate the scenario as [skipped] in the DesignContract
+→ If other scenarios have entry/exit dependencies on the skipped scenario → annotate [⚠️ GAP: skipped scenario has dependencies]
+```
+
+### B.4 03-design-contract.md Write Failure
+
+```
+→ Output the DesignContract content into the conversation
+→ Ask the designer to manually save as 03-design-contract.md
+→ Retry the write
 ```

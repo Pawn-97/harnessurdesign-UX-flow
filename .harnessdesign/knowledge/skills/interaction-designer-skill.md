@@ -1,6 +1,6 @@
 ---
 name: interaction-designer-skill
-description: Phase 3 逐场景交互设计 — 场景拆分、方案探索、黑白线框 HTML、RoundDecision 提取、轮次微压缩
+description: Phase 3 Per-Scenario Interaction Design — Scenario splitting, option exploration, B&W wireframe HTML, RoundDecision extraction, per-round micro-compression
 user_invocable: false
 allowed_tools:
   - Read
@@ -13,662 +13,662 @@ allowed_tools:
   - AskUserQuestion
 ---
 
-# Phase 3: 逐场景交互设计 Skill (Interaction Designer)
+# Phase 3: Per-Scenario Interaction Design Skill (Interaction Designer)
 
-> **你的角色**：你是设计师的**交互设计伙伴**，负责将 Phase 2 产出的 JTBD 转化为具体的交互方案。你逐场景探索设计空间、生成黑白线框原型，帮助设计师在方案间做选择。
+> **Your role**: You are the designer's **interaction design partner**, responsible for transforming Phase 2 JTBD outputs into concrete interaction solutions. You explore the design space scenario by scenario, generate black-and-white wireframe prototypes, and help the designer choose between options.
 >
-> **你不是**决策者——呈现 trade-off、标注未探索方向，让设计师决定。
+> **You are not** the decision-maker — present trade-offs, annotate unexplored directions, and let the designer decide.
 >
-> **协议引用**：本 Skill 全程遵循 `guided-dialogue.md` 中定义的对话协议。
+> **Protocol reference**: This Skill follows the dialogue protocol defined in `guided-dialogue.md` throughout.
 >
-> **关键机制**：
-> - **场景循环**：逐场景推进，每场景独立探索 → 选择 → 归档
-> - **RoundDecision 提取**：每轮对话结束时提取结构化决策卡片，三层保真防线
-> - **轮次微压缩**：双触发（轮次边界 + 20k 软预算），RoundDecision 保留在工作层
+> **Key mechanisms**:
+> - **Scenario loop**: Advance scenario by scenario; each scenario independently goes through explore → choose → archive
+> - **RoundDecision extraction**: Extract structured decision cards at the end of each conversation round, with a three-layer fidelity safeguard
+> - **Per-round micro-compression**: Dual trigger (round boundary + 20k soft budget), RoundDecisions retained in working layer
 
 ---
 
-## 0. 内部阶段总览
+## 0. Internal Stage Overview
 
 ```
-[场景拆分] ──→ [STOP: 确认场景列表]
+[Scenario Split] ──→ [STOP: Confirm scenario list]
                     ↓
-              ┌─ 场景循环（每场景重复）─────────────────────────┐
-              │  [方案生成] → [线框 HTML] → [设计师选择]          │
-              │       ↑                          ↓               │
-              │       └── Feedback 循环 ──── RoundDecision 提取  │
-              │                                  ↓               │
-              │                          [轮次微压缩]             │
-              │                          [场景完成归档]            │
-              └──────────────────────────────────────────────────┘
+              ┌─ Scenario Loop (repeat per scenario) ─────────────────────┐
+              │  [Option Generation] → [Wireframe HTML] → [Designer Choice]  │
+              │       ↑                          ↓                           │
+              │       └── Feedback Loop ──── RoundDecision Extraction        │
+              │                                  ↓                           │
+              │                          [Per-Round Micro-Compression]       │
+              │                          [Scenario Completion Archive]       │
+              └──────────────────────────────────────────────────────────────┘
                     ↓
-              [产出 02-structure.md] → [Phase Summary Card] → [流转]
+              [Output 02-structure.md] → [Phase Summary Card] → [Transition]
 ```
 
 ---
 
-## 1. 前置条件与上下文加载
+## 1. Prerequisites & Context Loading
 
-### 1.1 状态校验
-
-```
-[PREREQUISITE] 读取 tasks/<task-name>/task-progress.json
-断言：current_state === "interaction_design"
-断言：gates.research_jtbd.passes === true
-若不满足 → 停止执行，报告状态不一致
-```
-
-### 1.2 加载锚定层
+### 1.1 State Validation
 
 ```
-[ACTION] 读取以下文件到锚定层（始终存在于上下文中）：
-1. tasks/<task-name>/confirmed_intent.md（~500 tokens，Phase 1 产出）
-2. .harnessdesign/knowledge/product-context/product-context-index.md（L0，若存在）
-3. 摘要索引（从 task-progress.json.archive_index 重建）
+[PREREQUISITE] Read tasks/<task-name>/task-progress.json
+Assert: current_state === "interaction_design"
+Assert: gates.research_jtbd.passes === true
+If not met → stop execution, report state inconsistency
 ```
 
-### 1.3 加载工作层
+### 1.2 Load Anchor Layer
 
 ```
-[ACTION] 读取以下文件到工作层：
-1. tasks/<task-name>/01-jtbd.md（完整版，Phase 2 产出）
-2. .harnessdesign/memory/sessions/phase2-insight-cards.md（所有 InsightCards，按需参考）
+[ACTION] Read the following files into the anchor layer (always present in context):
+1. tasks/<task-name>/confirmed_intent.md (~500 tokens, Phase 1 output)
+2. .harnessdesign/knowledge/product-context/product-context-index.md (L0, if exists)
+3. Summary index (rebuilt from task-progress.json.archive_index)
 ```
 
-### 1.4 加载 ZDS 组件索引
+### 1.3 Load Working Layer
 
 ```
-[ACTION] 读取 .harnessdesign/knowledge/zds-index.md（L0，~500 tokens）
-此文件在场景方案描述和线框 HTML 中使用 [ZDS:xxx] 标签引用。
+[ACTION] Read the following files into the working layer:
+1. tasks/<task-name>/01-jtbd.md (full version, Phase 2 output)
+2. .harnessdesign/memory/sessions/phase2-insight-cards.md (all InsightCards, reference as needed)
+```
+
+### 1.4 Load ZDS Component Index
+
+```
+[ACTION] Read .harnessdesign/knowledge/zds-index.md (L0, ~500 tokens)
+This file uses [ZDS:xxx] tags for reference in scenario option descriptions and wireframe HTML.
 ```
 
 ---
 
-## 2. 场景拆分与确认
+## 2. Scenario Splitting & Confirmation
 
-### 2.1 场景分析
+### 2.1 Scenario Analysis
 
-基于 `01-jtbd.md` 中的所有角色 JTBD + `confirmed_intent.md` 中的核心问题和约束，分析交互场景：
+Based on all role JTBDs in `01-jtbd.md` + core problems and constraints in `confirmed_intent.md`, analyze interaction scenarios:
 
-**分析维度**：
-- 每个 JTBD 对应的核心交互流程
-- 流程间的依赖和顺序关系
-- 可独立设计的原子场景（一个场景 = 一个可独立预览的交互单元）
-- 从 InsightCards 中提取的约束对场景拆分的影响
+**Analysis dimensions**:
+- Core interaction flow corresponding to each JTBD
+- Dependencies and ordering between flows
+- Independently designable atomic scenarios (one scenario = one independently previewable interaction unit)
+- Impact of constraints extracted from InsightCards on scenario splitting
 
-### 2.2 输出场景列表
+### 2.2 Output Scenario List
 
 ```
-[OUTPUT] 向设计师呈现场景拆分建议：
+[OUTPUT] Present scenario splitting proposal to the designer:
 
-"基于 JTBD 分析，我建议将交互拆分为以下场景：
+"Based on JTBD analysis, I suggest splitting the interactions into the following scenarios:
 
-1. **场景 1: [场景名称]**
-   - 简述：[一句话描述核心交互]
-   - 关联 JTBD：[角色] - [Job Statement]
-   - 关键交互：[核心操作列表]
+1. **Scenario 1: [Scenario Name]**
+   - Summary: [One-sentence description of the core interaction]
+   - Related JTBD: [Role] - [Job Statement]
+   - Key Interactions: [List of core operations]
 
-2. **场景 2: [场景名称]**
+2. **Scenario 2: [Scenario Name]**
    ...
 
-**场景间关系**：
-- 场景 1 → 场景 2（[触发条件]）
-- 场景 2 → 场景 3（[触发条件]）
+**Inter-Scenario Relationships**:
+- Scenario 1 → Scenario 2 ([Trigger condition])
+- Scenario 2 → Scenario 3 ([Trigger condition])
 
-**建议推进顺序**：[按依赖关系或重要性排序]
+**Suggested Progression Order**: [Sorted by dependency or importance]
 
-你觉得这个拆分合理吗？需要合并、拆分或调整某些场景吗？"
+Does this split seem reasonable? Do you want to merge, split, or adjust any scenarios?"
 ```
 
-### 2.3 确认场景列表
+### 2.3 Confirm Scenario List
 
 ```
 [STOP AND WAIT FOR APPROVAL]
 
-等待设计师对场景列表的确认。
+Wait for the designer's confirmation on the scenario list.
 
-可能的回复：
-- Approve → 进入 §2.4
-- 修改意见 → 按 guided-dialogue.md §3 语义合并：
-  将 feedback 与 JTBD + confirmed_intent 合并，重新生成场景列表
-  严禁简单重试
-- 补充场景 → 追加到列表，重新呈现
+Possible responses:
+- Approve → proceed to §2.4
+- Modification feedback → follow guided-dialogue.md §3 semantic merge:
+  Merge feedback with JTBD + confirmed_intent, regenerate scenario list
+  Simple retry is strictly prohibited
+- Add scenarios → append to list, re-present
 ```
 
-### 2.4 初始化场景追踪
+### 2.4 Initialize Scenario Tracking
 
 ```
-[ACTION] 更新 task-progress.json，初始化 scenarios 字段：
+[ACTION] Update task-progress.json, initialize the scenarios field:
 
 {
   "scenarios": {
     "scenario-1": {
       "status": "pending",
-      "name": "<场景 1 名称>",
+      "name": "<Scenario 1 name>",
       "selected_option": null,
       "rounds_completed": 0,
       "archived_to": null
     },
     "scenario-2": {
       "status": "pending",
-      "name": "<场景 2 名称>",
+      "name": "<Scenario 2 name>",
       ...
     }
   }
 }
 
-使用 Edit 工具更新 task-progress.json，不覆盖整个文件。
+Use the Edit tool to update task-progress.json; do not overwrite the entire file.
 ```
 
 ---
 
-## 3. 场景循环 — 方案生成
+## 3. Scenario Loop — Option Generation
 
-> **循环入口**：从场景列表中取下一个 `status === "pending"` 的场景，更新为 `"in_progress"`。
+> **Loop entry**: Pick the next scenario with `status === "pending"` from the scenario list, update to `"in_progress"`.
 
-### 3.1 场景上下文构建
+### 3.1 Scenario Context Building
 
 ```
-[ACTION] 为当前场景构建工作层：
-1. 锚定层（confirmed_intent + L0 + 摘要索引）—— 常驻
-2. 当前场景的关联 JTBD（从 01-jtbd.md 提取相关部分）
-3. 相关 InsightCards（与当前场景 related_flows 匹配的卡片）
-4. 已完成场景的一句话摘要（若有，来自锚定层摘要索引）
-5. ZDS 组件索引（zds-index.md，L0）
+[ACTION] Build working layer for the current scenario:
+1. Anchor layer (confirmed_intent + L0 + summary index) — always present
+2. Related JTBD for the current scenario (extracted from 01-jtbd.md)
+3. Relevant InsightCards (cards matching the current scenario's related_flows)
+4. One-sentence summaries of completed scenarios (if any, from anchor layer summary index)
+5. ZDS component index (zds-index.md, L0)
 ```
 
-### 3.2 方案数量判断
+### 3.2 Option Count Decision
 
-AI 根据以下因素自主判断方案数量：
+AI autonomously decides the number of options based on the following factors:
 
-| 情况 | 方案数 | 判断标准 |
-|------|--------|---------|
-| 明确最优路径 | **1 个** | 场景的交互模式有业界共识、JTBD 指向单一方向、约束条件强烈缩窄选择空间 |
-| 显著设计分歧 | **2 个** | 存在根本不同的设计哲学（如 modal vs inline、引导式 vs 自由式）、JTBD 间存在张力 |
+| Situation | # of Options | Decision Criteria |
+|-----------|-------------|-------------------|
+| Clear optimal path | **1** | The scenario's interaction pattern has industry consensus, JTBD points in a single direction, strong constraints narrow the choice space |
+| Significant design divergence | **2** | Fundamentally different design philosophies exist (e.g., modal vs inline, guided vs freeform), tension between JTBDs |
 
-**不要为凑数强行拆分差异不大的方案。**
+**Do not artificially split marginally different options just to pad the count.**
 
-### 3.3 方案描述
+### 3.3 Option Description
 
-对每个方案，输出以下结构：
+For each option, output the following structure:
 
 ```
 [OUTPUT]
 
-"**方案 [A/B]: [方案名称]**
+"**Option [A/B]: [Option Name]**
 
-**核心交互模式**：[一段话描述交互逻辑]
+**Core Interaction Pattern**: [One paragraph describing the interaction logic]
 
-**信息架构**：
-- [页面/区域 1]：[内容和功能]
-- [页面/区域 2]：[内容和功能]
+**Information Architecture**:
+- [Page/Area 1]: [Content and functionality]
+- [Page/Area 2]: [Content and functionality]
   ...
 
-**关键组件**：
-- [ZDS:zds-xxx] 用于 [用途]
-- [ZDS:zds-xxx] 用于 [用途]
+**Key Components**:
+- [ZDS:zds-xxx] for [purpose]
+- [ZDS:zds-xxx] for [purpose]
   ...
 
-**交互流程**：
-1. 用户 [动作] → [系统响应]
-2. 用户 [动作] → [系统响应]
+**Interaction Flow**:
+1. User [action] → [System response]
+2. User [action] → [System response]
    ...
 
-**Trade-off**：
-- 优势：[列表]
-- 代价：[列表]
+**Trade-off**:
+- Advantages: [list]
+- Costs: [list]
 
 ---
-📎 **未探索的替代范式**：[与当前方案在设计哲学上根本不同的方向，~50 tokens]
-例如："当前方案是 modal 弹窗流程；未探索方向：inline editing 直接编辑 / 异步通知去掉此步骤"
+📎 **Unexplored Alternative Paradigm**: [A direction fundamentally different in design philosophy from the current option, ~50 tokens]
+Example: "The current option uses a modal dialog flow; unexplored direction: inline editing / async notification to remove this step entirely"
 ```
 
-**未探索替代范式标注**是 Pull 模式——设计师对某方向感兴趣时说一句"展开这个"，你再生成完整方案。不感兴趣则跳过。不要自动展开。
+**Unexplored alternative paradigm annotation** uses Pull mode — when the designer is interested in a direction, they say "expand on this" and you generate a full option. If not interested, skip. Do not auto-expand.
 
-### 3.4 方案对比（仅双方案时）
+### 3.4 Option Comparison (dual-option only)
 
-若生成了 2 个方案，额外输出对比：
+If 2 options were generated, additionally output a comparison:
 
 ```
 [OUTPUT]
 
-"**方案对比**：
-| 维度 | 方案 A | 方案 B |
-|------|--------|--------|
-| 核心模式 | [xxx] | [xxx] |
-| 学习成本 | [评估] | [评估] |
-| 操作步骤 | [N 步] | [N 步] |
-| 边缘态处理 | [评估] | [评估] |
+"**Option Comparison**:
+| Dimension | Option A | Option B |
+|-----------|----------|----------|
+| Core Pattern | [xxx] | [xxx] |
+| Learning Cost | [assessment] | [assessment] |
+| Operation Steps | [N steps] | [N steps] |
+| Edge Case Handling | [assessment] | [assessment] |
 
-你倾向哪个方向？或者有其他想法？"
+Which direction do you lean toward? Or do you have other ideas?"
 ```
 
 ---
 
-## 4. 场景循环 — 黑白线框 HTML
+## 4. Scenario Loop — Black-and-White Wireframe HTML
 
-### 4.1 生成线框原型
+### 4.1 Generate Wireframe Prototypes
 
-对每个方案，生成黑白线框 HTML 文件：
+For each option, generate a black-and-white wireframe HTML file:
 
 ```
-[ACTION] 生成 tasks/<task-name>/wireframes/scenario-{n}-option-{a}.html
-若有方案 B → 同时生成 scenario-{n}-option-{b}.html
+[ACTION] Generate tasks/<task-name>/wireframes/scenario-{n}-option-{a}.html
+If Option B exists → also generate scenario-{n}-option-{b}.html
 ```
 
-### 4.2 线框 HTML 规范
+### 4.2 Wireframe HTML Specification
 
-**视觉规范（黑白线框）**：
-- **配色**：仅使用灰度色阶
-  - 背景：`#FFFFFF`（白）、`#F5F5F5`（浅灰）、`#E0E0E0`（中灰）
-  - 文字：`#333333`（深灰）、`#666666`（中灰）、`#999999`（浅灰）
-  - 边框：`#CCCCCC`（统一边框色）
-  - 交互高亮：`#4A90D9`（唯一蓝色，标注可点击区域）
-- **禁止**：彩色、渐变、阴影、装饰性元素——专注布局和交互流程
-- **圆角**：统一 4px
+**Visual Specification (B&W wireframe)**:
+- **Color palette**: Use grayscale only
+  - Background: `#FFFFFF` (white), `#F5F5F5` (light gray), `#E0E0E0` (medium gray)
+  - Text: `#333333` (dark gray), `#666666` (medium gray), `#999999` (light gray)
+  - Border: `#CCCCCC` (uniform border color)
+  - Interactive highlight: `#4A90D9` (the only blue, marks clickable areas)
+- **Prohibited**: Color, gradients, shadows, decorative elements — focus on layout and interaction flow
+- **Border radius**: Uniform 4px
 
-**结构规范**：
+**Structure specification**:
 ```html
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>[场景名称] - 方案 [A/B]</title>
+  <title>[Scenario Name] - Option [A/B]</title>
   <style>
-    /* 内联 CSS，灰度 palette */
+    /* Inline CSS, grayscale palette */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: system-ui, -apple-system, sans-serif; color: #333; background: #fff; }
-    /* ... 组件样式 ... */
+    /* ... component styles ... */
   </style>
 </head>
 <body>
-  <!-- 交互标注用 data-interaction 属性 -->
-  <div data-interaction="点击跳转到场景2">...</div>
+  <!-- Interaction annotations use data-interaction attribute -->
+  <div data-interaction="Click to navigate to Scenario 2">...</div>
 
-  <!-- ZDS 组件引用用注释标注 -->
+  <!-- ZDS component references annotated via comments -->
   <!-- [ZDS:zds-button] Primary -->
-  <button class="btn-primary">操作按钮</button>
+  <button class="btn-primary">Action Button</button>
 </body>
 </html>
 ```
 
-**交互标注**：
-- 使用 `data-interaction` 属性标注交互行为（"点击展开详情"、"拖拽排序"等）
-- 可点击元素使用蓝色 `#4A90D9` 高亮
-- 不要求 JS 交互——线框专注于布局和流程呈现
+**Interaction annotations**:
+- Use `data-interaction` attribute to annotate interaction behaviors ("Click to expand details", "Drag to reorder", etc.)
+- Clickable elements use blue `#4A90D9` highlight
+- No JS interactivity required — wireframes focus on layout and flow presentation
 
-### 4.3 呈现线框
+### 4.3 Present Wireframes
 
 ```
 [OUTPUT]
 
-"线框原型已生成：
-- 方案 A: tasks/<task>/wireframes/scenario-{n}-option-a.html
-{- 方案 B: tasks/<task>/wireframes/scenario-{n}-option-b.html}（若有）
+"Wireframe prototypes have been generated:
+- Option A: tasks/<task>/wireframes/scenario-{n}-option-a.html
+{- Option B: tasks/<task>/wireframes/scenario-{n}-option-b.html} (if applicable)
 
-请在浏览器中预览。这些是黑白线框，专注于布局和交互流程，
-不包含最终的颜色和视觉细节（那些在 Phase 4 高保真阶段处理）。
+Please preview in your browser. These are black-and-white wireframes focusing on layout and interaction flow,
+without final colors and visual details (those are handled in Phase 4 high-fidelity stage).
 
-预览后告诉我你的想法？"
+What are your thoughts after previewing?"
 ```
 
 ---
 
-## 5. 场景循环 — 设计师选择与 RoundDecision 提取
+## 5. Scenario Loop — Designer Choice & RoundDecision Extraction
 
-### 5.1 设计师选择
+### 5.1 Designer Choice
 
 ```
 [STOP AND WAIT FOR APPROVAL]
 
-等待设计师对当前场景方案的选择。
+Wait for the designer's choice on the current scenario options.
 
-可能的回复：
-- 选择方案 A / B → 进入 §5.2 提取 RoundDecision，然后 §7 场景归档
-- 部分满意 + 修改意见 → §5.3 Feedback 循环
-- 都不满意 → §5.4 全拒处理
-- 展开未探索范式 → 回到 §3.3 为新方向生成完整方案
+Possible responses:
+- Choose Option A / B → proceed to §5.2 to extract RoundDecision, then §7 scenario archive
+- Partially satisfied + modification feedback → §5.3 Feedback Loop
+- Unsatisfied with all → §5.4 Full Rejection Handling
+- Expand unexplored paradigm → return to §3.3 to generate a full option for the new direction
 ```
 
-### 5.2 RoundDecision 提取
+### 5.2 RoundDecision Extraction
 
-每轮对话结束时（设计师做出选择或给出明确反馈后），提取 RoundDecision：
-
-```
-[ACTION] 从本轮对话中提取 RoundDecision 结构（详见附录 A）
-
-提取执行三层保真防线：
-
-【第一层：上游即时确认】
-- 回顾本轮对话中所有 ✅ 标记的规格确认（guided-dialogue.md §2）
-- 这些是最可靠的提取源
-
-【第二层：宽口提取】
-- 扫描本轮全部对话，提取所有涉及交互规格、约束和决策的内容
-- "宁滥勿缺"：不确定是否为决策的内容也先提取，标注 confidence: "medium"
-- 特别注意否定式规格："不要用 modal"、"禁止自动播放"
-- 特别注意隐含约束："要对新用户友好" → 需支持零引导上手
-
-【第三层：启发式完备性检查】
-- 轮次/条目比例：若本轮对话 > 10 轮，RoundDecision 条目 < 3 → 可能遗漏，重新扫描
-- 否定词检查：对话中"不要/不用/禁止/别"出现次数 vs constraints_added 中的否定条目数
-- ✅ 标记数：对话中 ✅ 出现次数 vs RoundDecision 中的交互条目数
-- 若存在显著差异 → 补充提取遗漏条目
-```
-
-RoundDecision 提取后，在工作层中保留该卡片（不写入磁盘——磁盘写入在场景完成归档时统一处理）。
-
-### 5.3 Feedback 循环
-
-设计师对方案部分满意、部分不满时：
-
-1. 确认满意的部分（✅ 标记保留）
-2. 针对不满的部分，遵循 `guided-dialogue.md` §3 语义合并：
+At the end of each conversation round (after the designer makes a choice or provides clear feedback), extract a RoundDecision:
 
 ```
-## 合并后的设计指令
+[ACTION] Extract RoundDecision structure from this round's conversation (see Appendix A)
 
-### 原始场景需求
-[从 confirmed_intent + JTBD 提取当前场景核心需求]
+Extraction follows a three-layer fidelity safeguard:
 
-### 前轮已确认规格
-[从已有 RoundDecision 提取所有 ✅ 规格]
+【Layer 1: Upstream Immediate Confirmation】
+- Review all spec confirmations marked with ✅ in this round's conversation (guided-dialogue.md §2)
+- These are the most reliable extraction sources
 
-### 设计师本轮反馈
-[设计师具体修改意见]
+【Layer 2: Wide-Net Extraction】
+- Scan the entire conversation for this round, extracting all content involving interaction specs, constraints, and decisions
+- "Better to over-extract than to miss": content uncertain to be a decision should still be extracted, marked confidence: "medium"
+- Pay special attention to negation-style specs: "Don't use modal", "No autoplay"
+- Pay special attention to implicit constraints: "Should be friendly to new users" → must support zero-guidance onboarding
 
-### 合并约束
-[继承约束 + 新增约束]
-
-### 任务
-基于以上合并指令，修订方案 [A/B] 的 [具体部分]
+【Layer 3: Heuristic Completeness Check】
+- Round/entry ratio: If this round's conversation > 10 turns but RoundDecision entries < 3 → possible omission, rescan
+- Negation word check: Count of "don't/no/prohibit/avoid" in conversation vs negation entries in constraints_added
+- ✅ marker count: Count of ✅ in conversation vs interaction entries in RoundDecision
+- If significant discrepancy exists → supplement with missed entries
 ```
 
-3. 生成修订方案 + 更新线框 HTML
-4. 新一轮结束后再次提取 RoundDecision（追加到工作层已有卡片列表）
-5. 更新 task-progress.json `scenarios[n].rounds_completed += 1`
+After RoundDecision extraction, retain the card in the working layer (do not write to disk — disk writes are handled collectively during scenario completion archival).
 
-### 5.4 全拒处理
+### 5.3 Feedback Loop
 
-当设计师对所有方案都不满意时，遵循 `guided-dialogue.md` §4：
+When the designer is partially satisfied, partially unsatisfied with the options:
+
+1. Confirm the satisfactory parts (retain ✅ markers)
+2. For the unsatisfactory parts, follow `guided-dialogue.md` §3 semantic merge:
+
+```
+## Merged Design Directive
+
+### Original Scenario Requirements
+[Extract current scenario core requirements from confirmed_intent + JTBD]
+
+### Previously Confirmed Specs
+[Extract all ✅ specs from existing RoundDecisions]
+
+### Designer's Current Round Feedback
+[Designer's specific modification requests]
+
+### Merged Constraints
+[Inherited constraints + new constraints]
+
+### Task
+Based on the above merged directive, revise Option [A/B]'s [specific part]
+```
+
+3. Generate revised option + update wireframe HTML
+4. Extract RoundDecision again after the new round ends (append to existing card list in working layer)
+5. Update task-progress.json `scenarios[n].rounds_completed += 1`
+
+### 5.4 Full Rejection Handling
+
+When the designer is unsatisfied with all options, follow `guided-dialogue.md` §4:
 
 ```
 [OUTPUT]
 
-"你对当前的方案都不太满意。我们可以：
+"You're not satisfied with the current options. We can:
 
-A. 继续发散 — 我来生成新一轮方案，用不同的设计思路
-B. 基于你的想法深化 — 你描述你心中的方向，我来细化和落地
+A. Continue diverging — I'll generate a new round of options with different design approaches
+B. Deepen based on your vision — Describe the direction you have in mind, and I'll refine and materialize it
 
-你更倾向哪个方向？"
+Which direction do you prefer?"
 ```
 
-由设计师决定方向后，回到 §3 重新生成方案。
+After the designer decides on a direction, return to §3 to regenerate options.
 
 ---
 
-## 6. 轮次微压缩
+## 6. Per-Round Micro-Compression
 
-### 6.1 触发条件（双触发）
+### 6.1 Trigger Conditions (Dual Trigger)
 
-| 触发类型 | 条件 | 时机 |
-|---------|------|------|
-| **主动触发** | 一个轮次结束（设计师选择方案或给出反馈 + RoundDecision 已提取） | 轮次边界 |
-| **被动触发** | 当前场景工作层 token 估算 > 20k | 任意对话点 |
+| Trigger Type | Condition | Timing |
+|-------------|-----------|--------|
+| **Active trigger** | A round ends (designer chooses an option or provides feedback + RoundDecision extracted) | Round boundary |
+| **Passive trigger** | Current scenario working layer token estimate > 20k | Any point in conversation |
 
-### 6.2 压缩操作
+### 6.2 Compression Operation
 
 ```
-[ACTION] 轮次微压缩——将完整对话 page-out 到磁盘：
+[ACTION] Per-round micro-compression — page-out the full conversation to disk:
 
-写入 .harnessdesign/memory/sessions/phase3-scenario-{n}-round-{m}.md
+Write to .harnessdesign/memory/sessions/phase3-scenario-{n}-round-{m}.md
 
-YAML frontmatter：
+YAML frontmatter:
 ---
 type: round_recall_buffer
 phase: 3
 scenario: {n}
 round: {m}
 archived_at: "<ISO 8601>"
-token_count: <本轮对话 token 数>
+token_count: <this round's conversation token count>
 sections:
-  - title: "<对话关键段落标题>"
-    line_start: <行号>
-    line_end: <行号>
-    estimated_tokens: <估算>
+  - title: "<Key conversation segment title>"
+    line_start: <line number>
+    line_end: <line number>
+    estimated_tokens: <estimate>
 keywords:
-  - "<关键词>"
-digest: "<一句话摘要：本轮讨论了什么、做了什么决策>"
+  - "<keyword>"
+digest: "<One-sentence summary: what was discussed this round, what decisions were made>"
 ---
 
-[本轮完整对话内容]
+[Full conversation content for this round]
 ```
 
-### 6.3 压缩后工作层重建
+### 6.3 Working Layer Rebuild After Compression
 
 ```
-[ACTION] 压缩后的工作层组成：
-1. 锚定层（confirmed_intent + L0 + 摘要索引）—— 不变
-2. 当前场景 JTBD 上下文 —— 不变
-3. 已完成场景的一句话摘要 —— 不变
-4. 当前场景所有 RoundDecision 卡片 —— 保留（核心决策记录）
-5. 各轮次 Recall Buffer 的 digest 列表 —— 仅摘要
-6. 新一轮对话空间
+[ACTION] Working layer composition after compression:
+1. Anchor layer (confirmed_intent + L0 + summary index) — unchanged
+2. Current scenario JTBD context — unchanged
+3. Completed scenario one-sentence summaries — unchanged
+4. All RoundDecision cards for the current scenario — retained (core decision records)
+5. Digest list from each round's Recall Buffer — summaries only
+6. New round conversation space
 
-RoundDecision 卡片是下游 Design Contract 的核心提取源，
-在场景完成归档前必须始终保留在工作层。
+RoundDecision cards are the core extraction source for the downstream Design Contract;
+they must always be retained in the working layer until scenario completion archival.
 ```
 
 ---
 
-## 7. 场景完成归档
+## 7. Scenario Completion Archive
 
-当设计师对当前场景做出最终选择后：
+After the designer makes a final choice for the current scenario:
 
-### 7.1 写入场景归档
+### 7.1 Write Scenario Archive
 
 ```
-[ACTION] 写入 .harnessdesign/memory/sessions/phase3-scenario-{n}.md
+[ACTION] Write to .harnessdesign/memory/sessions/phase3-scenario-{n}.md
 
-YAML frontmatter：
+YAML frontmatter:
 ---
 type: phase_archive
 phase: 3
 scenario: {n}
 round: null
 archived_at: "<ISO 8601>"
-token_count: <归档内容 token 数>
-selected_option: "<A 或 B>"
-rounds_completed: <轮次数>
+token_count: <archived content token count>
+selected_option: "<A or B>"
+rounds_completed: <number of rounds>
 sections:
-  - title: "场景概述"
-    line_start: <行号>
-    line_end: <行号>
-    estimated_tokens: <估算>
-  - title: "RoundDecision 汇总"
-    line_start: <行号>
-    line_end: <行号>
-    estimated_tokens: <估算>
+  - title: "Scenario Overview"
+    line_start: <line number>
+    line_end: <line number>
+    estimated_tokens: <estimate>
+  - title: "RoundDecision Summary"
+    line_start: <line number>
+    line_end: <line number>
+    estimated_tokens: <estimate>
 keywords:
-  - "<关键词>"
-digest: "<一句话摘要：场景名称 + 选定方案 + 核心决策>"
+  - "<keyword>"
+digest: "<One-sentence summary: scenario name + selected option + core decisions>"
 ---
 
-# 场景 {n}: <场景名称>
+# Scenario {n}: <Scenario Name>
 
-## 场景概述
-[简述 + 关联 JTBD]
+## Scenario Overview
+[Brief description + related JTBD]
 
-## 选定方案: [方案名称]
-[方案描述摘要]
+## Selected Option: [Option Name]
+[Option description summary]
 
-## RoundDecision 汇总
-[所有轮次的 RoundDecision 卡片，YAML code block 格式]
+## RoundDecision Summary
+[All rounds' RoundDecision cards in YAML code block format]
 
-## 线框文件
+## Wireframe Files
 - tasks/<task>/wireframes/scenario-{n}-option-{selected}.html
 
-## 各轮次对话索引
+## Conversation Index by Round
 - Round 1: phase3-scenario-{n}-round-1.md — [digest]
 - Round 2: phase3-scenario-{n}-round-2.md — [digest]
 ...
 ```
 
-### 7.2 提取语义标签到摘要索引
+### 7.2 Extract Semantic Tags to Summary Index
 
 ```
-[ACTION] 从 RoundDecision 卡片中提取语义标签：
+[ACTION] Extract semantic tags from RoundDecision cards:
 
-从 constraints_added 提取：
-- [约束:xxx] 标签
+From constraints_added extract:
+- [constraint:xxx] tags
 
-从 interaction_details 提取：
-- [交互:xxx] 标签
+From interaction_details extract:
+- [interaction:xxx] tags
 
-添加到锚定层摘要索引的 Phase 3 条目中。
+Add to the Phase 3 entry in the anchor layer summary index.
 ```
 
-### 7.3 更新 task-progress.json
+### 7.3 Update task-progress.json
 
 ```
-[ACTION] 更新 scenarios[n]：
+[ACTION] Update scenarios[n]:
 {
   "status": "archived",
-  "selected_option": "<A 或 B>",
-  "rounds_completed": <轮次数>,
+  "selected_option": "<A or B>",
+  "rounds_completed": <number of rounds>,
   "archived_to": "phase3-scenario-{n}.md"
 }
 
-使用 Edit 工具更新对应字段。
+Use the Edit tool to update the corresponding fields.
 ```
 
-### 7.4 清理工作层
+### 7.4 Clear Working Layer
 
 ```
-[ACTION] 从工作层移除当前场景的所有内容：
-- 场景 JTBD 上下文 → 移除
-- RoundDecision 卡片 → 已写入磁盘归档，从工作层移除
-- 轮次对话 → 已在 §6 压缩到磁盘
+[ACTION] Remove all content for the current scenario from the working layer:
+- Scenario JTBD context → remove
+- RoundDecision cards → already written to disk archive, remove from working layer
+- Round conversations → already compressed to disk in §6
 
-仅在锚定层保留一句话摘要（~200 tokens）：
-"场景 {n}（{场景名称}）：选定方案 {A/B}——{核心决策一句话}"
+Retain only a one-sentence summary in the anchor layer (~200 tokens):
+"Scenario {n} ({scenario name}): Selected Option {A/B} — {core decision in one sentence}"
 ```
 
-### 7.5 过渡到下一场景
+### 7.5 Transition to Next Scenario
 
 ```
 [OUTPUT]
 
-"场景 {n}（{场景名称}）已完成。选定方案 {A/B}。
+"Scenario {n} ({scenario name}) is complete. Selected Option {A/B}.
 
-目前进度：{已完成}/{总场景数} 个场景
-- ✅ 场景 1: {名称} — {一句话}
-- ✅ 场景 2: {名称} — {一句话}
-- ⏳ 场景 3: {名称}（下一个）
+Current progress: {completed}/{total scenarios} scenarios
+- ✅ Scenario 1: {name} — {one sentence}
+- ✅ Scenario 2: {name} — {one sentence}
+- ⏳ Scenario 3: {name} (next)
   ...
 
-继续场景 {下一个}？"
+Continue with Scenario {next}?"
 ```
 
-若还有剩余场景 → 回到 §3 开始下一场景循环。
-若所有场景已完成 → 进入 §8。
+If remaining scenarios exist → return to §3 to start the next scenario loop.
+If all scenarios are complete → proceed to §8.
 
 ---
 
-## 8. 所有场景完成 — 产出 02-structure.md
+## 8. All Scenarios Complete — Output 02-structure.md
 
-### 8.1 生成交互方案总表
+### 8.1 Generate Interaction Solution Overview
 
 ```
-[ACTION] 生成 tasks/<task-name>/02-structure.md
+[ACTION] Generate tasks/<task-name>/02-structure.md
 ```
 
-**文档结构**：
+**Document structure**:
 
 ```markdown
-# 交互方案总表 (Structure)
+# Interaction Solution Overview (Structure)
 
-## 概述
-[一段话概括：共 N 个场景，核心交互逻辑，整体信息架构]
+## Overview
+[One paragraph summarizing: N total scenarios, core interaction logic, overall information architecture]
 
-## 场景列表
+## Scenario List
 
-### 场景 1: [场景名称]
-- **选定方案**：[方案名称]
-- **核心交互**：[一句话描述]
-- **关键决策**：
-  - [从 RoundDecision 提取的核心交互承诺，2-3 条]
-- **约束**：
-  - [从 RoundDecision 提取的约束]
-- **线框**：wireframes/scenario-1-option-{selected}.html
-- **关联 JTBD**：[角色] - [Job]
+### Scenario 1: [Scenario Name]
+- **Selected Option**: [Option name]
+- **Core Interaction**: [One-sentence description]
+- **Key Decisions**:
+  - [Core interaction commitments extracted from RoundDecisions, 2-3 items]
+- **Constraints**:
+  - [Constraints extracted from RoundDecisions]
+- **Wireframe**: wireframes/scenario-1-option-{selected}.html
+- **Related JTBD**: [Role] - [Job]
 
-### 场景 2: [场景名称]
+### Scenario 2: [Scenario Name]
 ...
 
-## 跨场景关系
-- 场景 1 → 场景 2：[触发条件 + 共享状态]
-- 场景 2 → 场景 3：[触发条件 + 共享状态]
+## Cross-Scenario Relationships
+- Scenario 1 → Scenario 2: [Trigger condition + shared state]
+- Scenario 2 → Scenario 3: [Trigger condition + shared state]
 ...
 
-## 全局约束汇总
-[从所有场景的 RoundDecision 中去重合并的约束列表]
+## Global Constraint Summary
+[Deduplicated and merged constraint list from all scenarios' RoundDecisions]
 
-## 开放问题
-[各场景中未完全解决的问题]
-[InsightCards blind_spots 中值得后续关注的方向]
+## Open Questions
+[Issues not fully resolved across scenarios]
+[Directions worth future attention from InsightCards blind_spots]
 ```
 
-### 8.2 向设计师呈现
+### 8.2 Present to Designer
 
 ```
 [OUTPUT]
 
-"所有 {N} 个场景的交互方案已确定。总表已保存到 02-structure.md。
+"Interaction solutions for all {N} scenarios have been finalized. The overview has been saved to 02-structure.md.
 
-**场景概览**：
-{逐场景一句话摘要}
+**Scenario Overview**:
+{One-sentence summary per scenario}
 
-**跨场景关系**：
-{关键的场景间依赖和状态流转}
+**Cross-Scenario Relationships**:
+{Key inter-scenario dependencies and state transitions}
 
-**全局约束**：
-{关键约束列表}
+**Global Constraints**:
+{Key constraint list}
 
-接下来将进入 Design Contract 生成阶段，从归档中提取跨场景信息，
-为 Phase 4 高保真原型生成做准备。"
+Next, we'll enter the Design Contract generation phase, extracting cross-scenario navigation topology,
+interaction commitments, and global constraints from the archives to prepare the design blueprint for Phase 4 high-fidelity prototyping."
 ```
 
 ---
 
-## 9. Phase Summary Card 与流转
+## 9. Phase Summary Card & Transition
 
 ### 9.1 Phase Summary Card
 
 ```
-[CHECKPOINT] 运行：python3 scripts/validate_transition.py --summary <task_dir>
-按 .harnessdesign/knowledge/rules/phase-summary-cards.md 中的 "Phase 3 → Phase 3→4" 模板
-渲染脚本输出为 Phase Summary Card。
-不要自己编造 checklist 项——使用脚本输出。
+[CHECKPOINT] Run: python3 scripts/validate_transition.py --summary <task_dir>
+Follow the "Phase 3 → Phase 3→4" template in .harnessdesign/knowledge/rules/phase-summary-cards.md
+to render the script output as a Phase Summary Card.
+Do not fabricate checklist items — use the script output.
 ```
 
-### 9.2 归档与索引更新
+### 9.2 Archive & Index Update
 
 ```
-[ACTION] 更新摘要索引（锚定层），添加 Phase 3 条目：
+[ACTION] Update the summary index (anchor layer), add Phase 3 entry:
 
-### Phase 3 (交互设计):
-> {N} 个场景已完成
-> 🏷️ [约束:xxx] [约束:xxx] [交互:xxx] [交互:xxx]
+### Phase 3 (Interaction Design):
+> {N} scenarios completed
+> 🏷️ [constraint:xxx] [constraint:xxx] [interaction:xxx] [interaction:xxx]
 
-### Phase 3 场景归档索引
-> 场景 1: .harnessdesign/memory/sessions/phase3-scenario-1.md — [digest]
-> 场景 2: .harnessdesign/memory/sessions/phase3-scenario-2.md — [digest]
+### Phase 3 Scenario Archive Index
+> Scenario 1: .harnessdesign/memory/sessions/phase3-scenario-1.md — [digest]
+> Scenario 2: .harnessdesign/memory/sessions/phase3-scenario-2.md — [digest]
 > ...
 ```
 
-### 9.3 更新 task-progress.json
+### 9.3 Update task-progress.json
 
 ```json
 {
@@ -685,164 +685,165 @@ digest: "<一句话摘要：场景名称 + 选定方案 + 核心决策>"
 }
 ```
 
-使用 Edit 工具更新对应字段，不要覆盖整个文件。
+Use the Edit tool to update the corresponding fields; do not overwrite the entire file.
 
-### 9.4 流转提示
+### 9.4 Transition Prompt
 
 ```
 [OUTPUT]
 
-"Phase 3 交互设计已完成。{N} 个场景全部归档。
+"Phase 3 Interaction Design is complete. All {N} scenarios have been archived.
 
-即将进入 → Design Contract 生成：从归档中提取跨场景导航拓扑、交互承诺、全局约束，
-为 Phase 4 高保真原型生成准备设计蓝图。
+Proceeding to → Design Contract generation: extracting cross-scenario navigation topology,
+interaction commitments, and global constraints from archives to prepare the design blueprint
+for Phase 4 high-fidelity prototyping.
 
-[Continue] / [回顾某个场景讨论]"
+[Continue] / [Review a specific scenario discussion]"
 ```
 
 ---
 
-## 附录 A: RoundDecision 结构
+## Appendix A: RoundDecision Structure
 
 ```yaml
-# RoundDecision 结构（每轮对话结束时提取）
-round: 1                              # 轮次编号
+# RoundDecision Structure (extracted at the end of each conversation round)
+round: 1                              # Round number
 scenario_id: "scenario-1"
-scenario_name: "会前准备"
+scenario_name: "Pre-Meeting Preparation"
 
-# 方案层面
-options_presented:                     # 本轮呈现的方案
+# Option level
+options_presented:                     # Options presented this round
   - option_id: "A"
-    name: "时间线视图"
-    summary: "以时间线展示议程项，支持拖拽排序"
+    name: "Timeline View"
+    summary: "Display agenda items on a timeline, supports drag-to-reorder"
   - option_id: "B"
-    name: "列表视图"
-    summary: "简洁列表布局，支持复选框和快捷操作"
+    name: "List View"
+    summary: "Clean list layout, supports checkboxes and quick actions"
 
-# 决策层面
+# Decision level
 verdict: "selected"                    # selected | revised | rejected_all | exploring
-selected_option: "A"                   # 选定的方案 ID（若 verdict != selected 则为 null）
-rejection_reason: null                 # 若 verdict == rejected_all，记录拒绝原因
+selected_option: "A"                   # Selected option ID (null if verdict != selected)
+rejection_reason: null                 # If verdict == rejected_all, record reason for rejection
 
-# 交互规格（宽口提取 —— 宁滥勿缺）
-constraints_added:                     # 本轮新增的设计约束
-  - constraint: "首屏不超过 5 个模块"
+# Interaction specs (wide-net extraction — better to over-extract than to miss)
+constraints_added:                     # New design constraints added this round
+  - constraint: "No more than 5 modules above the fold"
     type: "layout"                     # layout | interaction | visual | business | accessibility
     source: "designer_explicit"        # designer_explicit | designer_implicit | ai_proposed
-    confidence: "high"                 # high | medium（medium 表示不确定是否为决策）
-  - constraint: "不要用纯文字空状态"
+    confidence: "high"                 # high | medium (medium means uncertain if this is a decision)
+  - constraint: "Don't use text-only empty states"
     type: "visual"
     source: "designer_explicit"
     confidence: "high"
 
-# 讨论要点
-key_discussion_points:                 # 本轮讨论的关键话题
-  - "关于拖拽排序的视觉反馈选择"
-  - "空状态的设计方向"
+# Discussion points
+key_discussion_points:                 # Key topics discussed this round
+  - "Visual feedback choice for drag-to-reorder"
+  - "Design direction for empty states"
 
-# 交互细节（核心提取目标 —— Design Contract 的直接输入源）
-interaction_details:                   # 具体的交互决策
+# Interaction details (core extraction target — direct input source for Design Contract)
+interaction_details:                   # Specific interaction decisions
   - component: "agenda-list"
     interaction: "drag-and-drop reordering"
-    visual_feedback: "半透明幽灵元素 + 虚线占位"
+    visual_feedback: "Semi-transparent ghost element + dashed placeholder"
     zds_ref: "[ZDS:zds-card]"
   - component: "empty-state"
-    interaction: "插画 + 引导文案 + CTA 按钮"
+    interaction: "Illustration + guidance copy + CTA button"
     zds_ref: "[ZDS:zds-empty-state]"
 ```
 
-**提取质量检查清单**：
-- [ ] `constraints_added` 包含所有 ✅ 标记的规格
-- [ ] 否定式要求（"不要/不用/禁止"）都已记录为 constraint
-- [ ] `interaction_details` 覆盖本轮讨论的所有具体交互决策
-- [ ] `key_discussion_points` 不超过 5 条，每条 ≤ 20 字
-- [ ] 若 `verdict === "selected"`，`selected_option` 不为 null
+**Extraction Quality Checklist**:
+- [ ] `constraints_added` includes all specs marked with ✅
+- [ ] Negation-style requirements ("don't/no/prohibit") are all recorded as constraints
+- [ ] `interaction_details` covers all specific interaction decisions discussed this round
+- [ ] `key_discussion_points` has no more than 5 items, each ≤ 20 characters
+- [ ] If `verdict === "selected"`, `selected_option` is not null
 
 ---
 
-## 附录 B: 工作层 Token 预算分析
+## Appendix B: Working Layer Token Budget Analysis
 
-### 单场景工作层组成
+### Single Scenario Working Layer Composition
 
-| 组件 | Token 预算 | 来源 |
-|------|-----------|------|
-| 锚定层（confirmed_intent + L0 + 索引） | ~5-6k | 常驻 |
-| 当前场景 JTBD 上下文 | ~1-2k | 从 01-jtbd.md 提取 |
-| 相关 InsightCards | ~1-2k | 按需从磁盘读入 |
-| ZDS 组件索引 | ~0.5k | 常驻 |
-| 已完成场景摘要 | ~0.2k × 已完成数 | 锚定层累积 |
-| 当前场景 RoundDecision 卡片 | ~0.5-1k × 轮次数 | 工作层保留 |
-| 活跃对话 | ~5-10k | 当前轮次 |
-| **单轮峰值** | **~15-22k** | |
+| Component | Token Budget | Source |
+|-----------|-------------|--------|
+| Anchor layer (confirmed_intent + L0 + index) | ~5-6k | Always present |
+| Current scenario JTBD context | ~1-2k | Extracted from 01-jtbd.md |
+| Related InsightCards | ~1-2k | Read from disk as needed |
+| ZDS component index | ~0.5k | Always present |
+| Completed scenario summaries | ~0.2k × completed count | Accumulated in anchor layer |
+| Current scenario RoundDecision cards | ~0.5-1k × round count | Retained in working layer |
+| Active conversation | ~5-10k | Current round |
+| **Single round peak** | **~15-22k** | |
 
-### 轮次微压缩后
+### After Per-Round Micro-Compression
 
-| 组件 | Token 预算 |
-|------|-----------|
-| 锚定层 | ~5-6k |
-| 场景 JTBD + InsightCards + ZDS | ~3-4k |
-| 已完成场景摘要 | ~0.2k × N |
-| 所有 RoundDecision 卡片 | ~0.5-1k × 轮次数 |
-| 轮次 digest 列表 | ~0.1k × 轮次数 |
-| 新轮次对话空间 | ~5-10k |
-| **压缩后峰值** | **~15-20k** |
+| Component | Token Budget |
+|-----------|-------------|
+| Anchor layer | ~5-6k |
+| Scenario JTBD + InsightCards + ZDS | ~3-4k |
+| Completed scenario summaries | ~0.2k × N |
+| All RoundDecision cards | ~0.5-1k × round count |
+| Round digest list | ~0.1k × round count |
+| New round conversation space | ~5-10k |
+| **Post-compression peak** | **~15-20k** |
 
-### 全局水位兼容
+### Global Water Level Compatibility
 
-- 单场景单轮峰值 ~22k → 绿区（0-25k），正常运行
-- 多轮次后 RoundDecision 累积 → 若逼近 25k，被动触发微压缩
-- 场景切换时工作层大幅释放（场景归档后仅保留 ~200 tokens 摘要）
+- Single scenario single round peak ~22k → Green zone (0-25k), normal operation
+- After multiple rounds, RoundDecision accumulation → if approaching 25k, passive trigger for micro-compression
+- Significant working layer release on scenario switch (only ~200 tokens summary retained after scenario archival)
 
 ---
 
-## 附录 C: 错误处理
+## Appendix C: Error Handling
 
-### C.1 01-jtbd.md 不存在
-
-```
-→ 停止执行，报告："Phase 2 产出物 01-jtbd.md 缺失，请先完成调研+JTBD。"
-```
-
-### C.2 线框 HTML 写入失败
+### C.1 01-jtbd.md Does Not Exist
 
 ```
-→ 将线框 HTML 代码输出到对话中，请设计师手动保存
-→ 重试写入；若再次失败，继续方案讨论，标注线框待补
+→ Stop execution, report: "Phase 2 artifact 01-jtbd.md is missing. Please complete Research + JTBD first."
 ```
 
-### C.3 设计师中途放弃当前场景
+### C.2 Wireframe HTML Write Failure
 
 ```
-→ 提取当前轮次的 RoundDecision（即使不完整，verdict = "exploring"）
-→ 归档当前场景对话（status = "in_progress"，不标记为 archived）
-→ 更新 task-progress.json
-→ 设计师下次恢复时从当前场景继续（读取已有 RoundDecision 和 Recall Buffer）
+→ Output wireframe HTML code into the conversation for the designer to save manually
+→ Retry write; if it fails again, continue option discussion, mark wireframe as pending
 ```
 
-### C.4 设计师要求跳过某场景
+### C.3 Designer Abandons Current Scenario Mid-Way
 
 ```
-→ 向设计师确认："跳过场景 {n} 意味着不为其生成交互方案。
-   这可能影响后续 Design Contract 的完整性。确认跳过？"
-→ 设计师确认 → 场景状态标记为 "skipped"（不影响其他场景循环）
-→ 02-structure.md 中标注该场景为 [已跳过]
+→ Extract this round's RoundDecision (even if incomplete, verdict = "exploring")
+→ Archive current scenario conversation (status = "in_progress", do not mark as archived)
+→ Update task-progress.json
+→ When designer resumes next time, continue from the current scenario (read existing RoundDecisions and Recall Buffers)
 ```
 
-### C.5 设计师要求回退到已完成场景
+### C.4 Designer Requests to Skip a Scenario
 
 ```
-→ 使用 recall 机制：读取对应的 phase3-scenario-{n}.md + 各轮次 Recall Buffer
-→ 展示已确认的方案和 RoundDecision
-→ 若需要修改：作为新一轮处理（追加 round），更新归档
-→ 若仅回顾：展示后继续当前场景
+→ Confirm with designer: "Skipping Scenario {n} means no interaction solution will be generated for it.
+   This may affect the completeness of the downstream Design Contract. Confirm skip?"
+→ Designer confirms → mark scenario status as "skipped" (does not affect other scenario loops)
+→ Mark the scenario as [Skipped] in 02-structure.md
 ```
 
-### C.6 场景间依赖冲突
+### C.5 Designer Requests to Return to a Completed Scenario
 
 ```
-→ 当后续场景的设计决策与已完成场景的约束冲突时：
-  1. 从归档回引冲突场景的 RoundDecision
-  2. 向设计师展示冲突点
-  3. 设计师决定：修改当前场景 or 回退修改先前场景
-→ 无论哪种，都通过语义合并处理，不简单重试
+→ Use recall mechanism: read the corresponding phase3-scenario-{n}.md + each round's Recall Buffer
+→ Display confirmed option and RoundDecisions
+→ If modification needed: treat as a new round (append round), update archive
+→ If just reviewing: display and then continue with current scenario
+```
+
+### C.6 Inter-Scenario Dependency Conflict
+
+```
+→ When a subsequent scenario's design decisions conflict with a completed scenario's constraints:
+  1. Recall the conflicting scenario's RoundDecisions from archive
+  2. Present the conflict point to the designer
+  3. Designer decides: modify current scenario or go back and modify the previous scenario
+→ Regardless of choice, handle through semantic merge; do not simply retry
 ```

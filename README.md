@@ -13,7 +13,7 @@
 
 ```bash
 # 1. 克隆仓库
-git clone https://[https://github.com/Pawn-97/ZM-design-flow.git]
+git clone https://[https://github.com/Pawn-97/harnessurdesign-UX-flow.git]
 cd design-flow
 
 # 2. 安装 Python 依赖（验证脚本需要）

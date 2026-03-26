@@ -24,7 +24,7 @@ allowed_tools:
 
 ### 1.1 `/harnessdesign-start` 命令处理
 
-当设计师输入 `/harnessdesign-start --prd <path>` 时：
+当设计师输入 `/harnessdesign-start` 时（不需要任何参数）：
 
 > **⚡ Token 效率原则**：初始化阶段的目标是尽快进入与设计师的对话。不要在对话开始前做不必要的探索（遍历目录、读 git log、运行校验脚本等）。只读取流程必需的文件。
 
@@ -33,16 +33,50 @@ allowed_tools:
    - 有效 = 文件存在 + 内容超过 200 字符 + 不包含 "Stub" 或 "placeholder"
    - 判定结果决定后续走 **路径 A**（无知识库）或 **路径 B**（有知识库）
 
-2. **创建任务工作区**：
+2. **任务收集对话**（Onboarding 检查之后、创建任务工作区之前）：
+
+   向设计师发出邀请，收集本次设计任务的输入：
+
+   ```
+   [OUTPUT]
+   "嗨！准备开始一个新的设计任务。
+
+   请告诉我这次要做什么——你可以：
+   - 📝 口头描述你的设计需求
+   - 📎 上传 PRD 文件（拖拽到终端即可）
+   - 🔀 两者都给——先描述背景，再上传文件
+
+   交给你了，怎么方便怎么来。"
+
+   [STOP AND WAIT]
+   ```
+
+   等待设计师回复：
+   - **设计师上传了文件（PRD/文档/截图）** → 记录文件路径为 `prd_path`
+   - **设计师口头描述了需求** → 记录为 `task_description`
+   - **两者都有** → 记录 `prd_path` + `task_description`
+   - 如果描述过于简短（<20 字），追问一句："能再多说几句吗？比如这个任务要解决什么问题、面向什么用户？"
+
+   收集完成后，向设计师确认任务名称：
+   ```
+   [OUTPUT]
+   "收到。我将为这个任务创建工作区：`tasks/<suggested-task-name>/`
+
+   如果你想换个名字，告诉我。否则我直接开始。"
+
+   [STOP AND WAIT]
+   ```
+
+3. **创建任务工作区**（设计师确认后）：
    ```
    tasks/<task-name>/
    ├── task-progress.json
    └── wireframes/           # Phase 3 线框原型存放
    ```
-   - `<task-name>` 从 PRD 文件名或设计师指定的名称生成（kebab-case）
+   - `<task-name>` 从 PRD 文件名、口头描述关键词、或设计师指定的名称生成（kebab-case）
    - **首次创建 `task-progress.json` 不需要运行 `validate_transition.py`**——校验仅适用于更新已有状态
 
-3. **根据知识库状态选择路径**：
+4. **根据知识库状态选择路径**：
 
 ---
 
@@ -53,7 +87,8 @@ allowed_tools:
 ```json
 {
   "task_name": "<task-name>",
-  "prd_path": "<path>",
+  "prd_path": "<path | null>",
+  "task_description": "<设计师口头描述 | null>",
   "created_at": "<ISO 8601>",
   "current_state": "onboarding",
   "expected_next_state": "init",
@@ -103,7 +138,8 @@ Onboarding 完成后：
 ```json
 {
   "task_name": "<task-name>",
-  "prd_path": "<path>",
+  "prd_path": "<path | null>",
+  "task_description": "<设计师口头描述 | null>",
   "created_at": "<ISO 8601>",
   "current_state": "alignment",
   "expected_next_state": "research_jtbd",

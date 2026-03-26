@@ -18,20 +18,21 @@ Phase 0: Onboarding（首次）→ Phase 1: 上下文对齐 → Phase 2: 调研+
 
 | 命令 | 操作 |
 |------|------|
-| `/harnessdesign-start --prd <path>` | 启动新设计任务（见下方详细流程） |
+| `/harnessdesign-start` | 启动新设计任务（AI 邀请设计师输入需求后创建任务工作区） |
 | `/harnessdesign-resume` | 恢复上次未完成的任务 |
 | `/harnessdesign-status` | 显示当前任务状态摘要 |
 | `/harnessdesign-update` | 更新工作流到最新版本 |
 | `/recall list` | 列出所有可回引的归档文件 |
 | `/recall <phase> --query "<keyword>"` | 按关键词精准回引归档内容 |
 
-### `/harnessdesign-start --prd <path>` 详细流程
+### `/harnessdesign-start` 详细流程
 
 1. 读取 `AGENTS.md`（本文件）了解全部规则
 2. 读取 `.harnessdesign/knowledge/skills/harnessdesign-router.md` 的 §1.1 了解初始化流程
-3. 按 harnessdesign-router.md 的指令创建任务工作区和 `task-progress.json`
-4. 执行 Onboarding 前置检查（检查知识库是否有效）
-5. 按状态机调度逻辑执行工作流
+3. 执行 Onboarding 前置检查（检查知识库是否有效）
+4. 邀请设计师输入任务需求（口头描述 / 上传 PRD / 两者兼具）
+5. 收到任务后创建任务工作区 `tasks/<task-name>/` 和 `task-progress.json`
+6. 按状态机调度逻辑执行工作流
 
 ### `/harnessdesign-resume` 详细流程
 

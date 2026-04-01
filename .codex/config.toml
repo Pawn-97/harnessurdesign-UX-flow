@@ -1,0 +1,9 @@
+[features]
+codex_hooks = true
+
+[mcp_servers.harnessdesign_runtime]
+command = "/bin/zsh"
+args = [
+  "-lc",
+  "python3 \"$(git rev-parse --show-toplevel)/.codex/runtime/server.py\"",
+]

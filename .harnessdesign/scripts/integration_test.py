@@ -42,6 +42,7 @@ RESERVED_STATES = ["logic_inquisitor", "baseline_validation"]
 EXPECTED_SKILLS = {
     "harnessdesign-router.md": "Central router",
     "guided-dialogue.md": "Dialogue protocol",
+    "codex-decision-adapter.md": "Codex structured decision adapter",
     "alignment-skill.md": "Phase 1: alignment",
     "research-strategist-skill.md": "Phase 2: research + JTBD",
     "interaction-designer-skill.md": "Phase 3: interaction design",
@@ -71,6 +72,9 @@ EXPECTED_ROOT_SCRIPTS = [
 
 # Expected directories
 EXPECTED_DIRS = [
+    ".agents/skills",
+    ".codex/runtime",
+    ".codex/runtime/hooks",
     ".harnessdesign/knowledge/skills",
     ".harnessdesign/knowledge/product-context",
     ".harnessdesign/knowledge/rules",
@@ -79,6 +83,35 @@ EXPECTED_DIRS = [
     ".harnessdesign/memory/constraints",
     ".harnessdesign/scripts",
     "scripts",
+]
+
+EXPECTED_CODEX_RUNTIME = [
+    ".codex/config.toml",
+    ".codex/hooks.json",
+    ".codex/runtime/common.py",
+    ".codex/runtime/decision_ui.py",
+    ".codex/runtime/server.py",
+    ".codex/runtime/smoke_test.py",
+    ".codex/runtime/hooks/session_start.py",
+    ".codex/runtime/hooks/user_prompt_submit.py",
+    ".codex/runtime/hooks/pre_tool_use_policy.py",
+    ".codex/runtime/hooks/post_tool_use_review.py",
+    ".codex/runtime/hooks/stop_continue.py",
+]
+
+EXPECTED_CODEX_SKILLS = [
+    ".agents/skills/harnessdesign-start/SKILL.md",
+    ".agents/skills/harnessdesign-resume/SKILL.md",
+    ".agents/skills/harnessdesign-status/SKILL.md",
+    ".agents/skills/harnessdesign-update/SKILL.md",
+    ".agents/skills/harnessdesign-migrate/SKILL.md",
+    ".agents/skills/harnessdesign-onboarding/SKILL.md",
+    ".agents/skills/harnessdesign-alignment/SKILL.md",
+    ".agents/skills/harnessdesign-research/SKILL.md",
+    ".agents/skills/harnessdesign-interaction/SKILL.md",
+    ".agents/skills/harnessdesign-contract/SKILL.md",
+    ".agents/skills/harnessdesign-hifi/SKILL.md",
+    ".agents/skills/harnessdesign-extract/SKILL.md",
 ]
 
 # ---------------------------------------------------------------------------
@@ -310,13 +343,45 @@ def test_python_scripts(r: TestResult):
         else:
             r.fail(f"Missing: scripts/{script}")
 
+    for relpath in EXPECTED_CODEX_RUNTIME:
+        filepath = p(relpath)
+        if os.path.isfile(filepath):
+            if filepath.endswith(".py"):
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        source = f.read()
+                    ast.parse(source)
+                    r.ok(f"{relpath} (syntax OK)")
+                except SyntaxError as e:
+                    r.fail(f"{relpath}: syntax error at line {e.lineno}: {e.msg}")
+            else:
+                r.ok(relpath)
+        else:
+            r.fail(f"Missing: {relpath}")
+
+
+def test_codex_skills(r: TestResult):
+    r.section("4. Codex Runtime Skills")
+
+    for relpath in EXPECTED_CODEX_SKILLS:
+        filepath = p(relpath)
+        if not os.path.isfile(filepath):
+            r.fail(f"Missing Codex skill: {relpath}")
+            continue
+        with open(filepath, "r", encoding="utf-8") as f:
+            content = f.read()
+        if content.startswith("---") and "name:" in content and "description:" in content:
+            r.ok(f"{relpath} (frontmatter OK)")
+        else:
+            r.warn(f"{relpath} missing expected skill frontmatter")
+
 
 # ---------------------------------------------------------------------------
 # Test 4: ZDS asset completeness
 # ---------------------------------------------------------------------------
 
 def test_zds_assets(r: TestResult):
-    r.section("4. ZDS Asset Completeness")
+    r.section("5. ZDS Asset Completeness")
 
     # Design.md
     design_path = p(".harnessdesign", "knowledge", "Design.md")
@@ -354,7 +419,7 @@ def test_zds_assets(r: TestResult):
 # ---------------------------------------------------------------------------
 
 def test_directories(r: TestResult):
-    r.section("5. Directory Structure")
+    r.section("6. Directory Structure")
 
     for dir_path in EXPECTED_DIRS:
         full_path = p(dir_path)
@@ -382,7 +447,7 @@ def test_directories(r: TestResult):
 # ---------------------------------------------------------------------------
 
 def test_state_chain_simulation(r: TestResult):
-    r.section("6. Simulated State Chain Walkthrough")
+    r.section("7. Simulated State Chain Walkthrough")
 
     # Create a temporary task directory UNDER the project root (so validate_transition
     # can find project-level artifacts via os.path.dirname(task_dir))
@@ -532,6 +597,7 @@ def main():
     test_state_machine_consistency(r)
     test_skill_files(r)
     test_python_scripts(r)
+    test_codex_skills(r)
     test_zds_assets(r)
     test_directories(r)
     test_state_chain_simulation(r)

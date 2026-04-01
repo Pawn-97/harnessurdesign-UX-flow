@@ -84,6 +84,8 @@ mkdir -p "$TARGET_DIR/.harnessdesign/knowledge/skills"
 mkdir -p "$TARGET_DIR/.harnessdesign/knowledge/rules"
 mkdir -p "$TARGET_DIR/.harnessdesign/knowledge/zds"
 mkdir -p "$TARGET_DIR/.harnessdesign/scripts"
+mkdir -p "$TARGET_DIR/.codex/runtime/hooks"
+mkdir -p "$TARGET_DIR/.agents/skills"
 mkdir -p "$TARGET_DIR/scripts"
 
 cp -r "$TMPDIR/repo/.harnessdesign/knowledge/skills/"*     "$TARGET_DIR/.harnessdesign/knowledge/skills/"
@@ -92,6 +94,8 @@ cp -r "$TMPDIR/repo/.harnessdesign/knowledge/zds/"*        "$TARGET_DIR/.harness
 cp    "$TMPDIR/repo/.harnessdesign/knowledge/Design.md"    "$TARGET_DIR/.harnessdesign/knowledge/Design.md"
 cp    "$TMPDIR/repo/.harnessdesign/knowledge/zds-index.md" "$TARGET_DIR/.harnessdesign/knowledge/zds-index.md"
 cp -r "$TMPDIR/repo/.harnessdesign/scripts/"*              "$TARGET_DIR/.harnessdesign/scripts/"
+cp -r "$TMPDIR/repo/.codex/runtime/"*                      "$TARGET_DIR/.codex/runtime/"
+cp -r "$TMPDIR/repo/.agents/skills/"*                      "$TARGET_DIR/.agents/skills/"
 cp -r "$TMPDIR/repo/scripts/"*                             "$TARGET_DIR/scripts/"
 
 # 工作区目录（不覆盖已有数据）
@@ -146,6 +150,25 @@ if [ -d "$TMPDIR/repo/.claude/commands" ]; then
   ok "已安装斜杠命令（/harnessdesign-*）"
 fi
 
+# ─── 配置 Codex 运行层 ───
+info "配置 Codex 环境..."
+mkdir -p "$TARGET_DIR/.codex"
+if [ ! -f "$TARGET_DIR/.codex/config.toml" ] && [ -f "$TMPDIR/repo/.codex/config.toml" ]; then
+  cp "$TMPDIR/repo/.codex/config.toml" "$TARGET_DIR/.codex/config.toml"
+  ok "已安装 Codex repo-local 配置"
+else
+  warn ".codex/config.toml 已存在或模板缺失，跳过（如需启用 Hooks/MCP 请手动合并）"
+fi
+
+if [ ! -f "$TARGET_DIR/.codex/hooks.json" ] && [ -f "$TMPDIR/repo/.codex/hooks.json" ]; then
+  cp "$TMPDIR/repo/.codex/hooks.json" "$TARGET_DIR/.codex/hooks.json"
+  ok "已安装 Codex hooks"
+else
+  warn ".codex/hooks.json 已存在或模板缺失，跳过"
+fi
+
+ok "已安装 Codex skills（/harnessdesign-*）与 runtime"
+
 # ─── 安装 Python 依赖（使用 venv） ───
 info "创建 Python 虚拟环境并安装依赖..."
 VENV_DIR="$TARGET_DIR/.venv"
@@ -175,6 +198,9 @@ echo -e "     ${BOLD}cd \"$TARGET_DIR\"${NC}"
 echo ""
 echo -e "  ${BLUE}2.${NC} 启动 Claude Code："
 echo -e "     ${BOLD}claude${NC}"
+echo ""
+echo -e "     ${YELLOW}或${NC} 启动 Codex："
+echo -e "     ${BOLD}codex${NC}"
 echo ""
 echo -e "  ${BLUE}3.${NC} 启动工作流（AI 会邀请你描述任务）："
 echo -e "     ${BOLD}/harnessdesign-start${NC}"

@@ -27,12 +27,20 @@ python3 .harnessdesign/scripts/integration_test.py
 ### 使用
 
 ```bash
-# 启动 Claude Code（在项目目录下）
+# 启动 Claude Code 或 Codex（在项目目录下）
 claude
+# 或
+codex
 
 # 启动工作流（首次会触发 Onboarding）
 /harnessdesign-start --prd path/to/your-prd.md
 ```
+
+在 Codex 中：
+
+- `/harnessdesign-*` 会通过 repo-local skills 作为命令入口
+- 关键写入会通过本地 `harnessdesign_runtime` MCP server 执行
+- 结构化决策会打开本地浏览器 chooser，而不是退回纯自然语言选择
 
 ### 工作流阶段
 
@@ -74,6 +82,8 @@ tasks/                       # 任务工作区（运行时生成，已 gitignore
 # 复制核心文件到目标项目
 cp -r .harnessdesign/ /path/to/your-project/.harnessdesign/
 cp -r scripts/ /path/to/your-project/scripts/
+cp -r .codex/ /path/to/your-project/.codex/
+cp -r .agents/ /path/to/your-project/.agents/
 cp CLAUDE.md /path/to/your-project/CLAUDE.md
 cp AGENTS.md /path/to/your-project/AGENTS.md
 
@@ -86,6 +96,7 @@ pip3 install -r /path/to/your-project/.harnessdesign/scripts/requirements.txt
 
 ```bash
 rm -rf .harnessdesign/ tasks/
+rm -rf .codex/ .agents/
 rm -f scripts/validate_transition.py scripts/verify_archive.py
 rm -f scripts/hook_pre_write.py scripts/hook_post_write.py
 rm -f scripts/task_progress_schema.json
@@ -98,6 +109,9 @@ rm -rf .claude/hooks.json
 ```bash
 # 全量一致性检查
 python3 .harnessdesign/scripts/integration_test.py
+
+# Codex runtime smoke test
+python3 .codex/runtime/smoke_test.py
 
 # 查看某个任务的当前状态
 python3 scripts/validate_transition.py --summary tasks/<task-name>

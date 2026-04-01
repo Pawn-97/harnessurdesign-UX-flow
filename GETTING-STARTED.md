@@ -124,6 +124,12 @@ claude
 
 > 用 Codex 的话，把 `claude` 换成 `codex`。
 
+如果你使用 Codex，这个仓库现在还会额外加载：
+
+- repo-local skills：提供 `/harnessdesign-*` 命令入口
+- repo-local hooks：在会话启动、命令别名解析和 Bash 绕过写入时提供守卫
+- 本地 decision chooser：在需要设计师做结构化决策时打开浏览器选择界面
+
 在 AI 对话界面中输入：
 
 ```

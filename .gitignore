@@ -5,6 +5,7 @@
 .claude/
 !.claude/commands/
 .cursor/
+.codex/runtime/state/
 
 # Runtime task workspaces (designer-specific, not shared)
 tasks/

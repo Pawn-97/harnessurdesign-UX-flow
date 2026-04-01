@@ -19,6 +19,7 @@ When the designer enters the following commands, you must recognize and execute 
 | Command | Action |
 |---------|--------|
 | `/harnessdesign-start` | Start a new design task (AI invites designer to provide requirements, then creates task workspace) |
+| `/harnessdesign-migrate` | Import existing design artifacts from other AI tools into HarnessDesign |
 | `/harnessdesign-resume` | Resume the last unfinished task |
 | `/harnessdesign-status` | Display current task status summary |
 | `/harnessdesign-update` | Update the workflow to the latest version |
@@ -54,9 +55,46 @@ When the designer enters the following commands, you must recognize and execute 
 4. Report update results to the designer: which files were updated, whether integration tests passed
 5. **Note**: Updates do not affect existing task data in `tasks/` or archives in `.harnessdesign/memory/`
 
-## ⚠️ Hooks Compensation Rules (Required Reading for Codex)
+## ⚠️ Codex Control Plane Rules (Required Reading for Codex)
 
-Codex does not have Claude Code's Hooks system and cannot automatically intercept file writes. **You must manually execute the following validations** — this is mandatory and cannot be skipped.
+Codex now uses a repo-local control plane:
+
+- `.codex/hooks.json` provides SessionStart / UserPromptSubmit / Bash guard / Stop hooks
+- `harnessdesign_runtime` MCP tools provide workflow-critical writes, state transitions, archive verification, recall, and structured decisions
+- `.agents/skills/harnessdesign-*` provide Codex-native command entrypoints
+
+### Critical File Rule
+
+When running inside Codex, the following files must be modified via `harnessdesign_runtime` MCP tools rather than generic edit tools:
+
+- `task-progress.json`
+- `confirmed_intent.md`
+- `00-research.md`
+- `01-jtbd.md`
+- `02-structure.md`
+- `03-design-contract.md`
+- `index.html`
+- archives under `.harnessdesign/memory/sessions/`
+
+Tool mapping:
+
+- `task-progress.json` → `hd_update_progress`
+- stage artifacts / archives / HTML → `hd_write_artifact`
+- archive-only recheck → `hd_verify_archive`
+- structured designer choice → `hd_ask_decision`
+
+### Structured Decision Rule
+
+For Codex, keep the shared Skill SOP semantics unchanged but change the transport:
+
+- Claude Code: `AskUserQuestion`
+- Codex: `hd_ask_decision`
+
+Read `.harnessdesign/knowledge/skills/codex-decision-adapter.md` when a shared Skill SOP contains `[DECISION POINT — STRUCTURED]`.
+
+## ⚠️ Fallback Validation Rules (Still Required if You Bypass the Runtime)
+
+Codex hooks still cannot intercept generic `Edit` / `Write` tool calls. If you ever bypass the runtime MCP tools and directly modify workflow-critical files, you must manually execute the following validations. This is a fallback safety net, not the preferred path.
 
 ### Pre-write Validation (replaces hook_pre_write.py)
 
@@ -154,6 +192,14 @@ onboarding → init → alignment → research_jtbd → interaction_design
 ## Directory Structure
 
 ```
+.agents/
+└── skills/                       # Codex repo-local skill entrypoints
+
+.codex/
+├── config.toml                   # Codex repo-local MCP + hook config
+├── hooks.json                    # Codex hook definitions
+└── runtime/                      # Codex control-plane runtime
+
 .harnessdesign/
 ├── knowledge/
 │   ├── skills/                    # Skill SOP files (core)

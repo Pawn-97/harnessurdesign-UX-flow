@@ -359,6 +359,50 @@ def test_skill_files(r: TestResult):
             "for Phase 2 convergence"
         )
 
+    migration_path = os.path.join(skills_dir, "migration-skill.md")
+    with open(migration_path, "r", encoding="utf-8") as f:
+        migration_content = f.read()
+    if (
+        "prototype_html" in migration_content
+        and "_migration/prototype-analysis.md" in migration_content
+        and "_migration/prototype-memory.md" in migration_content
+    ):
+        r.ok("migration-skill.md defines HTML prototype absorption artifacts")
+    else:
+        r.fail(
+            "migration-skill.md missing HTML prototype absorption guidance "
+            "(expected prototype_html + prototype-analysis.md + prototype-memory.md)"
+        )
+
+    if "Never edit files inside _migration/imports/ in place" in migration_content:
+        r.ok("migration-skill.md preserves imported prototype originals")
+    else:
+        r.fail("migration-skill.md missing protection rule for imported prototype originals")
+
+    interaction_path = os.path.join(skills_dir, "interaction-designer-skill.md")
+    with open(interaction_path, "r", encoding="utf-8") as f:
+        interaction_content = f.read()
+    if "prototype-memory.md" in interaction_content and "already validated in the migrated prototype" in interaction_content:
+        r.ok("interaction-designer-skill.md reuses migrated prototype memory before reopening discussion")
+    else:
+        r.fail(
+            "interaction-designer-skill.md missing migrated prototype reuse guidance "
+            "for Phase 3"
+        )
+
+    alchemist_path = os.path.join(skills_dir, "alchemist-skill.md")
+    with open(alchemist_path, "r", encoding="utf-8") as f:
+        alchemist_content = f.read()
+    if (
+        "Never edit imported HTML prototype in place" in alchemist_content
+        and "copy the source prototype to tasks/<task-name>/index.html" in alchemist_content
+    ):
+        r.ok("alchemist-skill.md edits a copied prototype instead of the imported original")
+    else:
+        r.fail(
+            "alchemist-skill.md missing copy-before-edit rule for migrated HTML prototypes"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Test 3: Python script availability

@@ -75,6 +75,24 @@ If not satisfied → Stop execution, report state inconsistency
 2. task-progress.json.accumulated_constraints (initially an empty array)
 ```
 
+### 1.3A Migration Prototype Inheritance Mode
+
+If the task originated from `/harnessdesign-migrate` and an imported HTML prototype exists:
+
+```
+[ACTION] Read:
+1. tasks/<task-name>/_migration/prototype-analysis.md
+2. tasks/<task-name>/_migration/prototype-memory.md
+3. The selected source prototype under tasks/<task-name>/_migration/imports/
+```
+
+Rules:
+- Never edit imported HTML prototype in place.
+- Before any refinement, copy the source prototype to tasks/<task-name>/index.html
+- Perform all Phase 4 edits on that copied working file only
+- Preserve sections marked reusable/stable in `prototype-memory.md` by default, unless `03-design-contract.md`, accumulated constraints, or designer feedback require change
+- If multiple HTML prototypes exist, choose the one that best matches the Design Contract; if the match is ambiguous, ask the designer before proceeding
+
 ### 1.4 Load ZDS Specifications
 
 ```
@@ -90,6 +108,16 @@ If not satisfied → Stop execution, report state inconsistency
 ## 2. HTML Generation
 
 ### 2.1 HTML Template Structure
+
+Default path:
+- If there is **no** migrated HTML prototype baseline, generate a complete single-file `tasks/<task-name>/index.html` from scratch
+- If there **is** a migrated HTML prototype baseline, start from the copied working file at `tasks/<task-name>/index.html` and refactor / extend it to satisfy the Design Contract
+
+When working from a migrated baseline, keep this order:
+1. Copy the source prototype to `tasks/<task-name>/index.html`
+2. Remove or rewrite only the parts that conflict with the current Design Contract
+3. Reuse good structure, states, and copy patterns where possible
+4. Then complete missing interactions and styling
 
 Generate a complete single-file `tasks/<task-name>/index.html` with the following structure:
 

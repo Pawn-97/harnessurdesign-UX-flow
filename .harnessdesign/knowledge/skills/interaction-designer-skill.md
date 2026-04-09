@@ -75,6 +75,23 @@ If not met → stop execution, report state inconsistency
 2. .harnessdesign/memory/sessions/phase2-insight-cards.md (all InsightCards, reference as needed)
 ```
 
+### 1.3A Migration Prototype Carry-forward
+
+If the task comes from `/harnessdesign-migrate` and the following files exist, load them before splitting scenarios:
+
+```
+tasks/<task-name>/_migration/prototype-analysis.md
+tasks/<task-name>/_migration/prototype-memory.md
+```
+
+Use them as follows:
+- Treat flows/layouts/copy already validated in the migrated prototype as the default baseline
+- Do **not** reopen discussion on items already validated in the migrated prototype unless:
+  - the designer explicitly wants to revisit them
+  - JTBD / constraints conflict with them
+  - prototype-analysis marks them as weak or contradictory
+- Focus scenario discussion on gaps, contradictions, and places where the inherited prototype needs expansion
+
 ### 1.4 Load ZDS Component Index
 
 ```
@@ -95,6 +112,7 @@ Based on all role JTBDs in `01-jtbd.md` + core problems and constraints in `conf
 - Dependencies and ordering between flows
 - Independently designable atomic scenarios (one scenario = one independently previewable interaction unit)
 - Impact of constraints extracted from InsightCards on scenario splitting
+- Which parts can be inherited directly from the migrated prototype without re-opening settled discussion
 
 ### 2.2 Output Scenario List
 
@@ -192,6 +210,7 @@ Use the Edit tool to update task-progress.json; do not overwrite the entire file
 3. Relevant InsightCards (cards matching the current scenario's related_flows)
 4. One-sentence summaries of completed scenarios (if any, from anchor layer summary index)
 5. ZDS component index (zds-index.md, L0)
+6. If present: the matching parts of `_migration/prototype-memory.md` / `_migration/prototype-analysis.md`
 ```
 
 ### 3.2 Option Count Decision

@@ -87,6 +87,9 @@ Copy/record all imported files into this directory.
 If designer provides verbal description, save as _migration/imports/verbal-context.md.
 ```
 
+**Never edit files inside _migration/imports/ in place.**
+They are immutable source evidence. All later refinement must happen on converted artifacts or copied working files inside the task workspace.
+
 ### 1.3 Follow-up (if needed)
 
 If only one type of artifact is provided:
@@ -148,6 +151,7 @@ Proceed directly to Stage 2
      - prd: Product requirements document
      - research: Market/competitive/user research
      - jtbd: Jobs-to-be-done analysis
+     - prototype_html: Runnable HTML prototypes or HTML mockups
      - wireframe: UI mockups, wireframes, screenshots
      - conversation: AI conversation exports
      - constraint: Design constraints, tech specs
@@ -178,6 +182,39 @@ Proceed directly to Stage 2
 - Total scan volume: ≤ 30k tokens across all files
 - For files exceeding 10k tokens: read first 5k + last 2k + section headings
 - For conversation exports (ChatGPT JSON): parse `messages` array, extract only `assistant` role messages with substantive content
+
+### 2.3 HTML Prototype Absorption
+
+If any imported file is classified as `prototype_html`, do not treat it as just another attachment.
+
+```
+[ACTION] For each prototype_html file:
+  1. Read the HTML structure and visible content
+  2. Cross-reference it with imported PRDs / research / JTBD / conversation artifacts
+  3. Identify:
+     - flows already implemented well
+     - states / modules / copy blocks worth preserving
+     - mismatches between the prototype and the surrounding documents
+     - parts that are clearly exploratory and should not be treated as settled
+```
+
+Generate:
+
+1. `tasks/<task-name>/_migration/prototype-analysis.md`
+   - Source prototype file(s)
+   - Core flows discovered
+   - Strong parts worth keeping
+   - Weak parts / contradictions / missing states
+   - Reuse recommendations for later phases
+
+2. `tasks/<task-name>/_migration/prototype-memory.md`
+   - **already_confirmed**: things we should avoid re-discussing unless the designer reopens them
+   - **safe_to_reuse**: layouts / flows / copy / state logic that can be inherited downstream
+   - **needs_followup**: prototype areas that still need validation
+   - **do_not_copy_forward**: exploratory or low-quality parts that should not become defaults
+   - **source_trace**: which HTML section / imported document each memory item came from
+
+**Rule**: Only move content into `prototype-memory.md` if it is visibly supported by the prototype and not contradicted by surrounding documents, or if the designer explicitly confirms it.
 
 ---
 
@@ -221,6 +258,7 @@ For each HD phase, evaluate how well the imported artifacts cover its requiremen
 - ✅ Interaction specifications per scenario
 - ✅ Wireframes or mockups (visual artifacts)
 - ✅ Design decisions documented with rationale
+- ✅ If `prototype_html` exists, the prototype's implemented flows are explainable and traceable
 
 ---
 
@@ -295,6 +333,8 @@ For each phase scored `full` or `partial`, generate the corresponding HD-format 
 3. **No fabrication**: Only include information that can be traced back to imported artifacts or the knowledge base. Leave sections empty with `[GAP: description]` markers rather than inventing content
 
 4. **Token targets**: Follow the same token budgets as original phase Skills (e.g., `confirmed_intent.md` ≤ 600 tokens)
+
+5. **Prototype carry-forward**: If `prototype-memory.md` exists, use it as the default inheritance map for later phases. Items in `already_confirmed` and `safe_to_reuse` should be preserved by default unless the designer explicitly changes direction.
 
 ---
 
@@ -387,6 +427,8 @@ Following the 4 dimensions from `knowledge-extractor-skill.md`:
   4. Competitor New Findings → competitor-analysis.md
 
 Each entry must be annotated with [migrated: source_file] for traceability.
+
+If `prototype-memory.md` exists, use it as a condensed source when extracting reusable interaction knowledge, while keeping the original HTML prototype as the traceable source of truth.
 ```
 
 ### 8.2 Designer Confirmation
@@ -492,6 +534,7 @@ If "✅ Fill gaps":
      - load `_migration/inventory.json` as carry-over evidence
      - treat any converted `00-research.md` / `01-jtbd.md` as draft baselines
      - prioritize Gap Closure Board closure over open-ended divergence
+  → If `prototype-analysis.md` / `prototype-memory.md` exist, pass them forward as default inheritance context for later phases
 
 If "⏭️ Proceed as-is":
   → Set current_state to "migration_complete"

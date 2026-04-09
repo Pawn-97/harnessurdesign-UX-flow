@@ -64,6 +64,7 @@ Optional (read if exists):
   6. .harnessdesign/memory/sessions/phase2-insight-cards.md — InsightCard collection
   7. accumulated_constraints in task-progress.json    — Accumulated constraints list
   8. .harnessdesign/memory/sessions/phase3-scenario-*.md    — Scenario archives (on demand, read only the RoundDecision sections)
+  9. tasks/<task-name>/_migration/prototype-memory.md — Migrated prototype carry-forward memory
 ```
 
 ### 2.2 Token Budget
@@ -71,6 +72,7 @@ Optional (read if exists):
 - Total read volume during scan phase: recommended ≤ 30k tokens
 - For large Tasks, prioritize reading `confirmed_intent.md` + `01-jtbd.md` + `03-design-contract.md`
 - For scenario archives, only scan the RoundDecision card sections (use Grep `## RoundDecision` to locate), do not read full conversations
+- If `prototype-memory.md` exists, use it as a condensed source of what was intentionally preserved from the migrated prototype
 
 ---
 

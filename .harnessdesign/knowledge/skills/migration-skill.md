@@ -488,6 +488,10 @@ If "✅ Fill gaps":
   → Set current_state to the first phase with gaps
   → Set expected_next_state accordingly
   → Dispatch to the corresponding Phase Skill
+  → If the first gap phase is `research_jtbd`, dispatch in **migration carry-over mode**:
+     - load `_migration/inventory.json` as carry-over evidence
+     - treat any converted `00-research.md` / `01-jtbd.md` as draft baselines
+     - prioritize Gap Closure Board closure over open-ended divergence
 
 If "⏭️ Proceed as-is":
   → Set current_state to "migration_complete"

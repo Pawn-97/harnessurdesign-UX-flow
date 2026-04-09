@@ -316,6 +316,30 @@ def test_skill_files(r: TestResult):
     else:
         r.fail("research-strategist-skill.md missing fresh boundary startup guidance")
 
+    if (
+        "migration_metadata" in research_content
+        and "_migration/inventory.json" in research_content
+        and "Gap Closure Board" in research_content
+    ):
+        r.ok("research-strategist-skill.md defines migration-aware Phase 2 closure guidance")
+    else:
+        r.fail(
+            "research-strategist-skill.md missing migration-aware closure guidance "
+            "(expected migration_metadata + _migration/inventory.json + Gap Closure Board)"
+        )
+
+    if (
+        "Rolling Insight Capture" in research_content
+        and "status: \"in_progress\"" in research_content
+        and "phase2-insight-cards.md" in research_content
+    ):
+        r.ok("research-strategist-skill.md defines proactive Phase 2 insight capture")
+    else:
+        r.fail(
+            "research-strategist-skill.md missing proactive insight capture guidance "
+            "(expected Rolling Insight Capture + in_progress InsightCard writes)"
+        )
+
     router_path = os.path.join(skills_dir, "harnessdesign-router.md")
     with open(router_path, "r", encoding="utf-8") as f:
         router_content = f.read()
@@ -323,6 +347,17 @@ def test_skill_files(r: TestResult):
         r.ok("harnessdesign-router.md references Phase 1→2 compile boundary")
     else:
         r.fail("harnessdesign-router.md missing Phase 1→2 compile boundary guidance")
+
+    guided_dialogue_path = os.path.join(skills_dir, "guided-dialogue.md")
+    with open(guided_dialogue_path, "r", encoding="utf-8") as f:
+        guided_dialogue_content = f.read()
+    if "workflow gate" in guided_dialogue_content and "final convergence decision belongs to the designer" in guided_dialogue_content:
+        r.ok("guided-dialogue.md allows explicit gate-status signaling without stealing designer control")
+    else:
+        r.fail(
+            "guided-dialogue.md missing explicit gate-status signaling guidance "
+            "for Phase 2 convergence"
+        )
 
 
 # ---------------------------------------------------------------------------

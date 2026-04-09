@@ -96,6 +96,30 @@ If `phase1_handoff.fresh_resume_required === true`, treat this startup as the bo
 Purpose: Understand existing knowledge so Stage A research focuses on incremental information
 ```
 
+### 1.6 Migration Carry-over Mode
+
+If `task-progress.json` contains `migration_metadata`, do **not** treat Phase 2 as a blank-sheet divergence round.
+
+```
+[ACTION] Build a migration-aware startup package:
+1. Read tasks/<task-name>/_migration/inventory.json (if it exists)
+2. Read existing 00-research.md / 01-jtbd.md if they already exist as migration drafts
+3. Extract any [GAP: ...] markers, unresolved contradictions, and weakly-supported claims
+4. Build a Gap Closure Board with:
+   - already_covered: findings already backed by migrated artifacts
+   - must_verify: claims that need one more confirmation
+   - unresolved_gaps: missing information that still blocks JTBD
+   - non_blocking_blind_spots: useful but not required directions
+```
+
+**Default rule for migrated tasks**:
+- If the Gap Closure Board shows only 1-2 blocking gaps, enter **compact closure mode**
+- Compact closure mode defaults to **1-2 targeted topics**, not open-ended divergence
+- After each topic round, re-score the Gap Closure Board
+- If `unresolved_gaps` becomes empty, or only `non_blocking_blind_spots` remain, move directly to Stage D JTBD convergence
+
+**Important**: For migrated tasks, Phase 2's job is to **close the remaining gaps**, not to re-run the entire research conversation from scratch.
+
 ---
 
 ## 2. Stage A — Research Execution
@@ -342,6 +366,8 @@ topic_domains:
 
 **Not required to cover all 8 topic domains** — based on confirmed_intent and research findings, engage in natural conversation with the designer, focusing on the 3-5 most relevant topic domains.
 
+For migrated tasks in compact closure mode, narrow this to the **minimum 1-2 domains** required by the Gap Closure Board.
+
 ### 5.2 Topic Guidance
 
 ```
@@ -359,6 +385,11 @@ Which direction would you like to start with? Or is there another topic you care
 
 **Key**: Topic order is decided by the designer. You can suggest but not enforce.
 
+```
+[ACTION] As soon as a topic is chosen, update phase2_state.current_topic_domain to that active topic domain.
+For migrated tasks, suggested topics should come from unresolved_gaps first, not from already_covered areas.
+```
+
 ### 5.3 Single Topic Round Dialogue
 
 Within each topic round:
@@ -367,6 +398,50 @@ Within each topic round:
 - Draw insights from research findings, but actively challenge assumptions and explore edge cases
 - Encourage the designer to supplement materials (screenshots, internal data, user feedback)
 - Natural conversation — do not mechanically proceed through the topic domain checklist item by item
+
+### 5.3A Rolling Insight Capture
+
+Do **not** wait until the topic ends to record what has already become clear.
+
+Trigger a capture when **any** of the following happens:
+- The designer confirms a new constraint, trade-off, or success criterion
+- A previously open question is now sufficiently answered
+- 4-6 substantive exchanges have passed without a written capture
+- You are about to branch into a new sub-direction within the same topic
+
+```
+[ACTION] Perform a rolling checkpoint:
+1. Output a short "Current capture" summary in the dialogue:
+   - Confirmed so far
+   - Still open
+   - What this changes for JTBD
+2. Upsert the current topic's working card in .harnessdesign/memory/sessions/phase2-insight-cards.md
+3. Mark the working card with status: "in_progress"
+4. Keep the card updated as the topic evolves; do not wait for topic transition
+```
+
+Working card structure:
+
+```yaml
+topic_domain: "<topic domain enum>"
+topic_label: "<specific topic title>"
+status: "in_progress"
+key_insights:
+  - "<current confirmed insight>"
+constraints_discovered:
+  - "<constraint>"
+open_questions:
+  - "<still-open question>"
+designer_materials_referenced:
+  - "<material description>"
+related_flows:
+  - "<flow name>"
+blind_spots:
+  - "<not yet explored angle>"
+  - "<not yet explored angle>"
+```
+
+This rolling write is required so that Phase 2 dialogue always leaves behind an up-to-date trail of key conclusions, even before topic transition happens.
 
 ### 5.4 Topic Transition Detection
 
@@ -446,7 +521,9 @@ digest: "<one-sentence summary>"
 #### Step 3: Append InsightCard to Disk File
 
 ```
-[ACTION] Append InsightCard to .harnessdesign/memory/sessions/phase2-insight-cards.md
+[ACTION] Finalize the working InsightCard in .harnessdesign/memory/sessions/phase2-insight-cards.md
+- If an in-progress card for this topic already exists, replace/update it instead of duplicating it
+- Promote its status from "in_progress" to "finalized"
 
 Format (Markdown + YAML code block):
 ## InsightCard: <topic_label>
@@ -454,6 +531,7 @@ Format (Markdown + YAML code block):
 ```yaml
 topic_domain: "..."
 topic_label: "..."
+status: "finalized"
 key_insights:
   - "..."
 constraints_discovered:
@@ -518,6 +596,9 @@ When the following conditions are met, determine the divergence phase can end:
 
 - Designer proactively indicates: "that's about it", "we can converge now", "let's start summarizing"
 - 3+ topics have been discussed and core dimensions of confirmed_intent are covered
+- The Gap Closure Board has no blocking gaps left
+- In migration carry-over / compact closure mode, 1-2 targeted topics have been completed and no new blocking gap has appeared
+- Two consecutive rolling captures add only refinements, not new blocking insights
 
 **You may present coverage, but the convergence decision belongs to the designer**:
 
@@ -527,7 +608,8 @@ When the following conditions are met, determine the divergence phase can end:
 {list core insight summary for each topic}
 
 From the confirmed_intent perspective, [assess coverage].
-Do you think we can start converging into JTBD? Or is there another direction you'd like to continue exploring?"
+From the workflow gate perspective, [state whether the minimum condition for JTBD convergence is already met].
+If you'd still like to open another direction, we can. Otherwise I'll switch to JTBD convergence and turn this into a draft we can confirm together."
 ```
 
 ---
